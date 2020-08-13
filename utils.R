@@ -1,6 +1,6 @@
 utils.read_points <- function(){
 
-  p <- readxl::read_xls(file.path("data", "OMI_Catalogue_Emissions_2005-2019.xls"),
+  p <- readxl::read_xls(file.path("data", "OMI_Catalogue_Emissions_2005-2019_ILA-update.xls"),
                         range="A3:BQ591")
 
   s <- sf::st_as_sf(p, coords=c("LONGITUD", "LATITUDE"), crs="+proj=longlat +datum=WGS84") #Same crs as raster to avoid transformations
