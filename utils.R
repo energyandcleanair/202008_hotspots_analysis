@@ -26,18 +26,23 @@ utils.date_from_filename <- function(filename){
 }
 
 utils.values_at_point <- function(file, points){
-  r <- raster::brick(file, varname="ColumnAmountSO2_PBL")
-  # values <- raster::extract(r, points)[,1]
-  points <- rgis::fast_extract(
-    sf = points,
-    ras = r,
-    funct = "mean.na",
-    small.algo = T, #important
-    col.names = NULL,
-    parallel = TRUE,
-    n.cores = NULL
-  ) %>% rename(value=r_layer)
+  tryCatch({
+    r <- raster::brick(file, varname="ColumnAmountSO2_PBL")
+    # values <- raster::extract(r, points)[,1]
+    points <- rgis::fast_extract(
+      sf = points,
+      ras = r,
+      funct = "mean.na",
+      small.algo = T, #important
+      col.names = NULL,
+      parallel = TRUE,
+      n.cores = NULL
+    ) %>% rename(value=r_layer)
+    points$date <- utils.date_from_filename(file)
+    return(points)
 
-  points$date <- utils.date_from_filename(file)
-  return(points)
+  }, error=function(e){
+    print(paste("Failed for file",file))
+    return(NA)
+  })
 }
