@@ -1,6 +1,6 @@
 # Historical files
-data/.nc4
-data/.nc4.1
+data/*.nc4
+data/*.nc4.1
 
 # History files
 .Rhistory
