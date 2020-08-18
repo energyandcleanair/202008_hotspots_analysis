@@ -1,9 +1,9 @@
 utils.read_points <- function(){
 
-  p <- readxl::read_xls(file.path("data", "OMI_Catalogue_Emissions_2005-2019_ILA-update.xls"),
+  p <- readxl::read_xlsx(file.path("data", "OMI_Catalogue_Emissions_2005-2019_ILS-update.xlsx"),
                         range="A3:BQ591")
 
-  s <- sf::st_as_sf(p, coords=c("LONGITUD", "LATITUDE"), crs="+proj=longlat +datum=WGS84") #Same crs as raster to avoid transformations
+  s <- sf::st_as_sf(p, coords=c("LONGITUDE", "LATITUDE"), crs="+proj=longlat +datum=WGS84") #Same crs as raster to avoid transformations
 
   return(s)
 }
@@ -39,7 +39,8 @@ utils.values_at_point <- function(file, points){
       n.cores = NULL
     ) %>% rename(value=r_layer)
     points$date <- utils.date_from_filename(file)
-    return(points)
+    points_lite <- tibble(points) %>% dplyr::select(-c(geometry))
+    return(points_lite)
 
   }, error=function(e){
     print(paste("Failed for file",file))

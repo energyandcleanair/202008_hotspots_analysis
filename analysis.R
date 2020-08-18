@@ -1,25 +1,28 @@
 require(dplyr)
 require(sf)
 require(stringr)
+require(pbapply)
+require(raster)
 require(rgdal) #install.packages("rgdal")
 require(velox) #remotes::install_github("hunzikp/velox")
 require(rgis) #remotes::install_github("Pakillo/rgis")
-require(raster)
-require(ggplot2)
-require(pbapply)
+
+
 
 source('./utils.R')
 
 
-radii_km <- c(1,10,50)
+radii_km <- c(2, 20, 200)
 pts_0 <- utils.read_points()
 
 pts <- do.call("rbind", lapply(radii_km, utils.buffer, points=pts_0))
 
-
 # Get values
-files <- list.files("data",pattern="*.nc4", full.names = T)
+files <- list.files("data",pattern="\\.nc4$", full.names = T)
 
-pts_w_value <- do.call("rbind", pbapply::pblapply(files, utils.values_at_point, points=pts))
+pt_values <- do.call("rbind", pbapply::pblapply(files, utils.values_at_point, points=pts))
+pt_values_lite <- pt_values %>% dplyr::select(NUMBER, radius_km, value, date)
 
-ggplot(tibble(pts_w_value) %>% dplyr::filter(NUMBER < 100)) + geom_line(aes(date, value, color='radius_km')) + facet_wrap(~NUMBER)
+saveRDS(pt_values_lite, file.path("results", "values.RDS"))
+
+
