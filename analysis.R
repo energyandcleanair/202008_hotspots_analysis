@@ -97,19 +97,20 @@ ggsave(file.path("results","plots","prediction_2020_zoom.png"), plot=p_zoom, wid
 
 # Other exploratory plots -------------------------------------------------
 
-# (p <- ggplot(d.omi.pred %>%filter(year_offsetted>=2008, !is.na(SOURCETY)),
-#              aes(x=year_offsetted, y=ratio)) +
-#     geom_smooth(stat = 'summary', color = 'blue', fill = 'red', alpha = 0.4,
-#                 fun.data = median_hilow, fun.args = list(conf.int = 0.5)) +
-#     geom_smooth(stat = 'summary', color = 'blue', fill = 'red', alpha = 0.2,
-#                 fun.data = median_hilow, fun.args = list(conf.int = 0.90)) +
-#     facet_wrap(~SOURCETY) +
-#     labs(title="Yoy (August-July) variation of estimated hotspot SO2 emissions",
-#          x=NULL, y=NULL,
-#          caption="50% and 90% confidence interval") +
-#     scale_y_continuous(labels = scales::percent) +
-#     scale_x_continuous(breaks=seq(2008, 2020)) +
-#     scale_color_discrete(name="")+
-#     rcrea::theme_crea())
+(p_iqr <- ggplot(d.omi.pred %>%filter(year_offsetted>=2008, !is.na(SOURCETY)),
+             aes(x=year_offsetted, y=ratio_yoy)) +
+    geom_smooth(stat = 'summary', color = 'blue', fill = 'red', alpha = 0.2,
+                fun.data = median_hilow, fun.args = list(conf.int = 0.5)) +
+    # geom_smooth(stat = 'summary', color = 'blue', fill = 'red', alpha = 0.2,
+    #             fun.data = median_hilow, fun.args = list(conf.int = 0.90)) +
+    facet_wrap(~SOURCETY) +
+    labs(title="Yoy (August-July) variation of estimated hotspot SO2 emissions",
+         x=NULL, y=NULL,
+         caption="Red area represents the interquartile range") +
+    scale_y_continuous(labels = scales::percent) +
+    scale_x_continuous(breaks=seq(2008, 2020, 2), expand=c(0,0)) +
+    scale_color_discrete(name="")+
+    rcrea::theme_crea())
 
+ggsave(file.path("results","plots","prediction_2020_iqr.png"), plot=p_iqr, width=14, height=10)
 
