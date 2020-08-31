@@ -1,7 +1,9 @@
 utils.read_points <- function(){
 
   p <- readxl::read_xlsx(file.path("data", "OMI_Catalogue_Emissions_2005-2019_ILS-update.xlsx"),
-                        range="A3:BQ591")
+                        range="A3:BQ591") %>%
+    dplyr::select(-c(SOURCETY)) %>%
+    dplyr::rename(SOURCETY=`New Sourcety`)
 
   s <- sf::st_as_sf(p, coords=c("LONGITUDE", "LATITUDE"), crs="+proj=longlat +datum=WGS84") #Same crs as raster to avoid transformations
 
@@ -48,21 +50,112 @@ utils.values_at_point <- function(file, points){
   })
 }
 
-utils.prediction_ytd <- function(d.all.year, d.omi, cut_date="2020-08-01"){
+
+utils.add_predicted_and_ci <- function(d.omi.pred, m){
+
+  predicted <- predict(m, d.omi.pred, interval = 'confidence') #If 'prediction', interval is significantly larger. Uncertain which one is the most relevant here. It answers different questions.
+  d.omi.pred$predicted <- pmax(predicted[,'fit'], 0)
+  d.omi.pred$sigma_eq_lm = (predicted[,'upr']-predicted[,'lwr'])/2/1.96
+
+  # Variance equivalent = variance due to lm + variance due to NASA uncertainty
+  d.omi.pred %>% mutate(predicted_upr=predicted + 1.96*sqrt(sigma_eq_lm^2 + sigma_original^2),
+                        predicted_lwr=predicted - 1.96*sqrt(sigma_eq_lm^2 + sigma_original^2))
+
+}
+
+utils.CI.Fieller = function(theta1.hat, sd1.hat, year_1,
+                            theta2.hat, sd2.hat, year_2,
+                            alpha=0.05 # theoretical coverage (1-alpha)
+)
+{
+  if(year_2!=year_1+1){
+    return(NA)
+  }
+  ## CI Fieller
+  # Raftery, A E, and T. Schweder. 1993.
+  ## “Inference About the Ratio of Two Parameters, with Application to
+  # Whale Censusing.” The American Statistician 47 (4): 259–64. Eq. 1-2
+  # We assume here independence between theta1.hat and theta2.hat
+  # the size of the sample used to obtain the estimates
+  # and their sd is assumed to be unknown
+  # we substitute the quantile of a Normal(0,1) to that of a St(?)
+  # that should be used in principle
+  z = qnorm(p=1-alpha/2)
+  if( (theta1.hat/sd1.hat <= z) & (theta2.hat/sd2.hat <= z) )
+  {
+    L = 0 ; U = Inf
+  }else
+  {
+    rad = (theta1.hat^2 * sd2.hat^2 + theta2.hat^2 * sd1.hat^2 -
+             z^2 * sd1.hat^2 * sd2.hat^2 )
+    L = (theta1.hat * theta2.hat - z*sqrt(rad) )/( theta2.hat^2 - z * sd2.hat^2 )
+    U = (theta1.hat * theta2.hat + z*sqrt(rad) )/( theta2.hat^2 - z * sd2.hat^2 )
+    if((theta1.hat/sd1.hat > z) & (theta2.hat/sd2.hat <= z) ){L = U ; U = Inf}
+    if((theta1.hat/sd1.hat <= z) & (theta2.hat/sd2.hat > z) ){L = 0}
+  }
+  R.hat = theta1.hat/theta2.hat
+  res = c(R.hat,L,U)
+  names(res) = c('R.hat','L','U')
+  return(res)
+
+}
+## END CI Fieller
+#
+# utils.add_yoy_with_ci <- function(d.omi.pred, group_by_cols=c("SOURCETY")){
+#
+#   d.omi.pred %>%
+#     filter(!is.na(SOURCETY), year_offsetted>=2000) %>%
+#     group_by_at(c(group_by_cols, "year_offsetted")) %>%
+#     summarise(value=sum(predicted, na.rm=T),
+#               lwr=sum(predicted_lwr, na.rm=T),
+#               upr=sum(predicted_upr, na.rm=T),
+#               sigma_eq_lm=sqrt()) %>%
+#     group_by_at(group_by_cols) %>%
+#     arrange(year_offsetted) %>%
+#     mutate(ratio_yoy_dfr==pmap(list(lag(value), lag(), year_1,
+#                                     theta2.hat, sd2.hat, year_2)ifelse(lag(year_offsetted)==year_offsetted-1,
+#                             (value-lag(value))/lag(value),
+#                             NA),
+#            ratio_yoy_lwr=ifelse(lag(year_offsetted)==year_offsetted-1,
+#                                 (lwr-lag(value))/lag(value),
+#                                 NA),
+#            ratio_yoy_upr=ifelse(lag(year_offsetted)==year_offsetted-1,
+#                                 (upr-lag(value))/lag(value),
+#                                 NA))
+#
+#     r <- utils.CI.Fieller(value_before, sigma_before, value_after, sigma_after, 0.05)
+#
+# }
+
+utils.prediction_ytd <- function(d.all.year, d.omi, date_to_year, n_sigma=1){
+
+  # n_sigma: roughly equivalent to monte carlo? Since there is uncertainty in
+  # the original dataset, we generate many different versions of it based on the sigma
+  # indicated (n_sigma per source x year)
+  # NOTE: doesn't have any impact on standard error. Need to think of a better approach
 
   # We train models on d.all.year for every calendar year (the only periods we have Measures data for)
   # And then apply to different year cutting (e.g. August to July)
-  d <- d.all.year
+  d <- d.all.year %>% mutate(NUMBER=as.integer(NUMBER), year=as.integer(year))
   d  %<>% filter(SOURCETY != "Volcano")
   d  %<>% distinct(NUMBER, year, value_original) %>%
     group_by(NUMBER) %>%
     summarise(value_original_mean = mean(value_original, na.rm=T)) %>%
     full_join(d, .)
+
   dw <- d %>%
     mutate(radius_km = paste0('r', radius_km)) %>%
     dplyr::select(-count_omi_sgt_0) %>%
     spread(radius_km, value_omi) %>%
     mutate(variation=value_original-value_original_mean)
+
+  if(n_sigma>1){
+    dw %>%
+      group_by(NUMBER, year) %>%
+      summarise(value_original=list(pmax(0,rnorm(n=n_sigma, mean=value_original, sd=sigma_original)))) %>%
+      tidyr::unnest(value_original) %>%
+      right_join(dw %>% dplyr::select(-c(value_original))) -> dw
+  }
 
   lm(value_original ~ value_original_mean + (r50 + r200):(SOURCETY + ELEVATION), data=dw) -> m
   summary(m)
@@ -74,45 +167,41 @@ utils.prediction_ytd <- function(d.all.year, d.omi, cut_date="2020-08-01"){
   # summary(lm(variation ~ factor(NUMBER) + (r50 + r200):(SOURCETY + ELEVATION), data=dw))
   # summary(lm(value_original ~ (r50 + r200):(SOURCETY + ELEVATION), data=dw))
   # summary(lm(value_original ~ (r10 + r20 + r50 + r100 + r200):(SOURCETY + ELEVATION), data=dw))
-  predict(m, dw) -> dw$value_original_pred
+  # predict(m, dw) -> dw$value_original_pred
 
   # Plot some performance or simple correlation charts
-  plt_all <- dw %>%
-    ggplot(aes(value_original, value_original_pred, color=SOURCETY)) +
-    geom_point() +
-    geom_smooth(method = "lm") +
-    facet_wrap(~NUMBER, scales='free')
-
-  ggsave(file.path("results","plots","pred_vs_observed.png"), plot=plt_all, width=28, height=26, scale=1.3)
-
-
-  plt_pearson <- dw %>%
-    group_by(NUMBER, SOURCETY) %>%
-    summarise(pearson=cor(value_original, value_original_pred, method = c("pearson"))) %>%
-    ggplot() +
-    geom_boxplot(aes(SOURCETY, pearson)) +
-    theme_crea() +
-    labs(subtitle="Correlation between predicted and original SO2 emissions",
-              y="Pearson's r",
-              x=NULL)
-  ggsave(file.path("results","plots","pearson_sourcetype.png"), plot=plt_pearson, width=12, height=10)
-
-  # Create prediction data set on offsetted-year values
-  date_to_year_offseted <- function(date){
-    lubridate::year(date - lubridate::days(lubridate::yday(cut_date)) + lubridate::years(1))
-  }
+  # plt_all <- dw %>%
+  #   ggplot(aes(value_original, value_original_pred, color=SOURCETY)) +
+  #   geom_point() +
+  #   geom_smooth(method = "lm") +
+  #   facet_wrap(~NUMBER, scales='free')
+  #
+  # ggsave(file.path("results","plots","pred_vs_observed.png"), plot=plt_all, width=28, height=26, scale=1.3)
+  #
+  #
+  # plt_pearson <- dw %>%
+  #   group_by(NUMBER, SOURCETY) %>%
+  #   summarise(pearson=cor(value_original, value_original_pred, method = c("pearson"))) %>%
+  #   ggplot() +
+  #   geom_boxplot(aes(SOURCETY, pearson)) +
+  #   theme_crea() +
+  #   labs(subtitle="Correlation between predicted and original SO2 emissions",
+  #             y="Pearson's r",
+  #             x=NULL)
+  # ggsave(file.path("results","plots","pearson_sourcetype.png"), plot=plt_pearson, width=12, height=10)
 
   d.omi.pred <- d.omi %>%
-    mutate(year_offsetted= date_to_year_offseted(date)) %>%
-    filter(year_offsetted > lubridate::year(min(date)), year_offsetted < 2021) %>%
+    mutate(year_offsetted= date_to_year(date)) %>%
+    filter(!is.na(year_offsetted),
+           year_offsetted > lubridate::year(min(date)),
+           year_offsetted < 2021) %>%
     group_by(NUMBER, year_offsetted, radius_km) %>%
     summarise(value_omi=mean(value, na.rm=T), count=n()) %>%
     mutate(radius_km = paste0('r', radius_km)) %>%
     spread(radius_km, value_omi) %>%
-    left_join(d %>% ungroup() %>% distinct(NUMBER, SOURCETY, ELEVATION, value_original_mean))
+    left_join(d %>% ungroup() %>% distinct(NUMBER, SOURCETY, COUNTRY, ELEVATION, value_original_mean, sigma_original))
 
-  d.omi.pred$predicted <- pmax(predict(m, d.omi.pred),0)
-
+  d.omi.pred %<>% utils.add_predicted_and_ci(m)
   d.omi.pred <- d.omi.pred %>%
     group_by(NUMBER) %>%
     arrange(year_offsetted) %>%
@@ -124,4 +213,35 @@ utils.prediction_ytd <- function(d.all.year, d.omi, cut_date="2020-08-01"){
   d.omi.pred$ratio_yoy[is.infinite(d.omi.pred$ratio_yoy)] <- 100
 
   return(d.omi.pred)
+}
+
+
+utils.country_table_yoy <- function(d.omi.pred, group_by_cols=c("COUNTRY")){
+
+  selected <- c("India", "Russia", "China", "Mexico", "South Africa", "Saudi Arabia", "Europe", "Australia")
+  d <- d.omi.pred
+
+  europe <- c("Austria", "Belgium", "Bulgaria", "Croatia", "Republic of Cyprus", "Czech Republic",
+              "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Ireland",
+              "Italy", "Latvia", "Lithuania", "Luxembourg", "Malta", "Netherlands", "Poland",
+              "Portugal", "Romania", "Slovakia", "Slovenia", "Spain", "Sweden",
+              # Below are "European countries" not in the EU
+              "Ukraine", "UK", "Serbia", "Albania")
+
+  d$COUNTRY[d$COUNTRY %in% europe] <- "Europe"
+
+  dyoy <- d %>%
+    group_by_at(c(group_by_cols, "year_offsetted")) %>%
+    summarise(predicted=sum(predicted, na.rm=T)) %>%
+    group_by_at(group_by_cols) %>%
+    arrange(year_offsetted) %>%
+    mutate(ratio_yoy=ifelse(lag(year_offsetted)==year_offsetted-1,
+                            (predicted-lag(predicted))/lag(predicted),
+                            NA)) %>%
+    mutate(year_offsetted_text = paste(year_offsetted,"/",year_offsetted-1))
+
+  dyoy %>%
+    filter(COUNTRY %in% selected,
+           year_offsetted==2020) %>%
+    dplyr::select_at(c(group_by_cols, "year_offsetted", "ratio_yoy"))
 }
