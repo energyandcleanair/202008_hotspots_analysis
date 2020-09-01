@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>SO2 Hotspots 2019</title>
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+	<script src="https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js" integrity="sha512-yocoLferfPbcwpCMr8v/B0AB4SWpJlouBwgE0D3ZHaiP1nuu5djZclFEIj9znuqghaZ3tdCMRrreLoM8km+jIQ==" crossorigin="anonymous"></script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <style>
+      body {
+        overflow: hidden;
+      }
+
+      body * {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+
+      .map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+
+      .legend {
+        background-color: #fff;
+        border-radius: 3px;
+        bottom: 30px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        font: 12px/20px "Helvetica Neue", Arial, Helvetica, sans-serif;
+        padding: 10px;
+        position: absolute;
+        right: 10px;
+        z-index: 1;
+      }
+
+      .legend h4 {
+        margin: 0 0 10px;
+      }
+
+      .legend div span {
+        border-radius: 50%;
+        display: inline-block;
+        height: 10px;
+        margin-right: 5px;
+        width: 10px;
+      }
+    </style>
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-compare/v0.4.0/mapbox-gl-compare.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-compare/v0.4.0/mapbox-gl-compare.css"
+      type="text/css"
+    />
+    <div id="comparison-container">
+      <div id="before" class="map"></div>
+      <div id="after" class="map"></div>
+    </div>
+    <div id="legend" class="legend">
+      <h4>SO2 Emissions [DU]</h4>
+    </div>
+    <script>
+		var min=0.05
+		var max=1.2
+		var pow=0.7
+		var scale = chroma.scale(['yellow', 'navy']).mode('lch').domain([min,Math.pow(max,pow)]);
+		
+		var scale_element = document.getElementById('legend');
+		[min, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1, 1.2].forEach(function(i){
+			scale_element.innerHTML += "<div><span style=\"background-color:" + scale(Math.pow(i,pow)).hex() + "\"></span>"+i+"</div>";
+		})
+		
+
+      mapboxgl.accessToken =
+        "pk.eyJ1IjoiaHViZXJ0LXRoaWVyaW90IiwiYSI6ImNrZWpydm1yZjFhYWwydXFiNXp2YzVhaXcifQ.j61s7IWe1FpvaEr2fHQQbA";
+
+      var beforeMap = new mapboxgl.Map({
+        container: "before",
+        style: "mapbox://styles/mapbox/dark-v10",
+        center: [0, 0],
+        zoom: 0,
+      });
+
+      var afterMap = new mapboxgl.Map({
+        container: "after",
+        style: "mapbox://styles/mapbox/dark-v10",
+        center: [0, 0],
+        zoom: 0,
+      });
+
+      beforeMap.on("load", function () {
+        beforeMap.addSource("hotspots-2018", {
+          type: "vector",
+          url: "mapbox://hubert-thieriot.2embkneg",
+        });
+
+        beforeMap.addLayer({
+          id: "layer-hotspots-2018",
+          source: "hotspots-2018",
+          "source-layer": "SO2_hotspots_2018-172j0f",
+          type: "fill",
+          paint: {
+            "fill-color": [
+              "interpolate",
+              ["linear"],
+              ["get", "value"],
+			  0.1,scale(Math.pow(0.1,pow)).hex(),
+			  0.2,scale(Math.pow(0.2,pow)).hex(),
+			  0.3,scale(Math.pow(0.3,pow)).hex(),
+			  0.4,scale(Math.pow(0.4,pow)).hex(),
+			  0.5,scale(Math.pow(0.5,pow)).hex(),
+			  0.6,scale(Math.pow(0.6,pow)).hex(),
+			  0.7,scale(Math.pow(0.7,pow)).hex(),
+			  0.8,scale(Math.pow(0.8,pow)).hex(),
+			  0.9,scale(Math.pow(0.9,pow)).hex(),
+			  1,scale(Math.pow(1,pow)).hex(),
+			  1.1,scale(Math.pow(1.1,pow)).hex(),
+			  1.2,scale(Math.pow(1.2,pow)).hex()
+            ],
+            "fill-opacity": 0.75,
+          },
+        });
+      });
+
+      afterMap.on("load", function () {
+        afterMap.addSource("hotspots-2019", {
+          type: "vector",
+          url: "mapbox://hubert-thieriot.ckejtqssa07as23n3lh5gx6xn-805zw",
+        });
+
+        afterMap.addLayer({
+          id: "layer-hotspots-2019",
+          source: "hotspots-2019",
+          "source-layer": "SO2_hotspots_2019",
+          type: "fill",
+          paint: {
+            "fill-color": [
+              "interpolate",
+              ["linear"],
+              ["get", "value"],
+              0.1,scale(Math.pow(0.1,pow)).hex(),
+			  0.2,scale(Math.pow(0.2,pow)).hex(),
+			  0.3,scale(Math.pow(0.3,pow)).hex(),
+			  0.4,scale(Math.pow(0.4,pow)).hex(),
+			  0.5,scale(Math.pow(0.5,pow)).hex(),
+			  0.6,scale(Math.pow(0.6,pow)).hex(),
+			  0.7,scale(Math.pow(0.7,pow)).hex(),
+			  0.8,scale(Math.pow(0.8,pow)).hex(),
+			  0.9,scale(Math.pow(0.9,pow)).hex(),
+			  1,scale(Math.pow(1,pow)).hex(),
+			  1.1,scale(Math.pow(1.1,pow)).hex(),
+			  1.2,scale(Math.pow(1.2,pow)).hex()
+            ],
+            "fill-opacity": 0.75,
+          },
+        });
+      });
+
+      // A selector or reference to HTML element
+      var container = "#comparison-container";
+
+      var map = new mapboxgl.Compare(beforeMap, afterMap, container, {
+        // Set this to enable comparing two maps by mouse movement:
+        // mousemove: true
+      });
+    </script>
+  </body>
+</html>
