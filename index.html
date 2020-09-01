@@ -143,6 +143,14 @@
       #menu a.active:hover {
         background: #3074a4;
       }
+
+      .popup h4 {
+        margin: 0;
+      }
+
+      .popup span {
+        display: block;
+      }
     </style>
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-compare/v0.4.0/mapbox-gl-compare.js"></script>
     <link
@@ -448,6 +456,57 @@
 
         var layers = document.getElementById("menu");
         layers.appendChild(link);
+
+        // Popup
+        // Create a popup, but don't add it to the map yet.
+        var popup = new mapboxgl.Popup({
+          closeButton: false,
+          closeOnClick: false,
+        });
+
+        function addPowerplantPopup(map_) {
+          map_.on("mouseenter", "layer-powerplants", function (e) {
+            map_.getCanvas().style.cursor = "pointer";
+            console.log("AAA");
+            var coordinates = e.features[0].geometry.coordinates.slice();
+            var props = e.features[0].properties;
+            var legend = `<div class="popup"><h4>${props.Plant}</h4><span>Fuel: ${props.Fuel}</span><span>Capacity: ${props.Capacity} MW</span></div>`;
+            while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+              coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+            }
+            popup.setLngLat(coordinates).setHTML(legend).addTo(map_);
+          });
+
+          map_.on("mouseleave", "layer-powerplants", function () {
+            map_.getCanvas().style.cursor = "";
+            popup.remove();
+          });
+        }
+
+        addPowerplantPopup(beforeMap);
+        addPowerplantPopup(afterMap);
+
+        function addHotspotPopup(map_) {
+          map_.on("mouseenter", "layer-hotspots-dots", function (e) {
+            map_.getCanvas().style.cursor = "pointer";
+            console.log("AAA");
+            var coordinates = e.features[0].geometry.coordinates.slice();
+            var props = e.features[0].properties;
+            var legend = `<div class="popup"><h4>${props.NASA_NAME}</h4><span>Type: ${props.SOURCETY}</span><span>Country: ${props.COUNTRY}</span></div>`;
+            while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+              coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+            }
+            popup.setLngLat(coordinates).setHTML(legend).addTo(map_);
+          });
+
+          map_.on("mouseleave", "layer-hotspots-dots", function () {
+            map_.getCanvas().style.cursor = "";
+            popup.remove();
+          });
+        }
+
+        addHotspotPopup(beforeMap);
+        addHotspotPopup(afterMap);
       }
     </script>
   </body>
