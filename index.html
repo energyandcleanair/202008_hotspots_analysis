@@ -7,8 +7,12 @@
       name="viewport"
       content="initial-scale=1,maximum-scale=1,user-scalable=no"
     />
-	<script src="https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.js"></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js" integrity="sha512-yocoLferfPbcwpCMr8v/B0AB4SWpJlouBwgE0D3ZHaiP1nuu5djZclFEIj9znuqghaZ3tdCMRrreLoM8km+jIQ==" crossorigin="anonymous"></script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js"
+      integrity="sha512-yocoLferfPbcwpCMr8v/B0AB4SWpJlouBwgE0D3ZHaiP1nuu5djZclFEIj9znuqghaZ3tdCMRrreLoM8km+jIQ=="
+      crossorigin="anonymous"
+    ></script>
     <link
       href="https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.css"
       rel="stylesheet"
@@ -85,16 +89,23 @@
       <h4>SO2 Emissions [DU]</h4>
     </div>
     <script>
-		var min=0.05
-		var max=1.2
-		var pow=0.7
-		var scale = chroma.scale(['yellow', 'navy']).mode('lch').domain([min,Math.pow(max,pow)]);
-		
-		var scale_element = document.getElementById('legend');
-		[min, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1, 1.2].forEach(function(i){
-			scale_element.innerHTML += "<div><span style=\"background-color:" + scale(Math.pow(i,pow)).hex() + "\"></span>"+i+"</div>";
-		})
-		
+      var min = 0.05;
+      var max = 1.2;
+      var pow = 0.7;
+      var scale = chroma
+        .scale(["yellow", "navy"])
+        .mode("lch")
+        .domain([min, Math.pow(max, pow)]);
+
+      var scale_element = document.getElementById("legend");
+      [min, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1, 1.2].forEach(function (i) {
+        scale_element.innerHTML +=
+          '<div><span style="background-color:' +
+          scale(Math.pow(i, pow)).hex() +
+          '"></span>' +
+          i +
+          "</div>";
+      });
 
       mapboxgl.accessToken =
         "pk.eyJ1IjoiaHViZXJ0LXRoaWVyaW90IiwiYSI6ImNrZWpydm1yZjFhYWwydXFiNXp2YzVhaXcifQ.j61s7IWe1FpvaEr2fHQQbA";
@@ -129,18 +140,30 @@
               "interpolate",
               ["linear"],
               ["get", "value"],
-			  0.1,scale(Math.pow(0.1,pow)).hex(),
-			  0.2,scale(Math.pow(0.2,pow)).hex(),
-			  0.3,scale(Math.pow(0.3,pow)).hex(),
-			  0.4,scale(Math.pow(0.4,pow)).hex(),
-			  0.5,scale(Math.pow(0.5,pow)).hex(),
-			  0.6,scale(Math.pow(0.6,pow)).hex(),
-			  0.7,scale(Math.pow(0.7,pow)).hex(),
-			  0.8,scale(Math.pow(0.8,pow)).hex(),
-			  0.9,scale(Math.pow(0.9,pow)).hex(),
-			  1,scale(Math.pow(1,pow)).hex(),
-			  1.1,scale(Math.pow(1.1,pow)).hex(),
-			  1.2,scale(Math.pow(1.2,pow)).hex()
+              0.1,
+              scale(Math.pow(0.1, pow)).hex(),
+              0.2,
+              scale(Math.pow(0.2, pow)).hex(),
+              0.3,
+              scale(Math.pow(0.3, pow)).hex(),
+              0.4,
+              scale(Math.pow(0.4, pow)).hex(),
+              0.5,
+              scale(Math.pow(0.5, pow)).hex(),
+              0.6,
+              scale(Math.pow(0.6, pow)).hex(),
+              0.7,
+              scale(Math.pow(0.7, pow)).hex(),
+              0.8,
+              scale(Math.pow(0.8, pow)).hex(),
+              0.9,
+              scale(Math.pow(0.9, pow)).hex(),
+              1,
+              scale(Math.pow(1, pow)).hex(),
+              1.1,
+              scale(Math.pow(1.1, pow)).hex(),
+              1.2,
+              scale(Math.pow(1.2, pow)).hex(),
             ],
             "fill-opacity": 0.75,
           },
@@ -163,18 +186,30 @@
               "interpolate",
               ["linear"],
               ["get", "value"],
-              0.1,scale(Math.pow(0.1,pow)).hex(),
-			  0.2,scale(Math.pow(0.2,pow)).hex(),
-			  0.3,scale(Math.pow(0.3,pow)).hex(),
-			  0.4,scale(Math.pow(0.4,pow)).hex(),
-			  0.5,scale(Math.pow(0.5,pow)).hex(),
-			  0.6,scale(Math.pow(0.6,pow)).hex(),
-			  0.7,scale(Math.pow(0.7,pow)).hex(),
-			  0.8,scale(Math.pow(0.8,pow)).hex(),
-			  0.9,scale(Math.pow(0.9,pow)).hex(),
-			  1,scale(Math.pow(1,pow)).hex(),
-			  1.1,scale(Math.pow(1.1,pow)).hex(),
-			  1.2,scale(Math.pow(1.2,pow)).hex()
+              0.1,
+              scale(Math.pow(0.1, pow)).hex(),
+              0.2,
+              scale(Math.pow(0.2, pow)).hex(),
+              0.3,
+              scale(Math.pow(0.3, pow)).hex(),
+              0.4,
+              scale(Math.pow(0.4, pow)).hex(),
+              0.5,
+              scale(Math.pow(0.5, pow)).hex(),
+              0.6,
+              scale(Math.pow(0.6, pow)).hex(),
+              0.7,
+              scale(Math.pow(0.7, pow)).hex(),
+              0.8,
+              scale(Math.pow(0.8, pow)).hex(),
+              0.9,
+              scale(Math.pow(0.9, pow)).hex(),
+              1,
+              scale(Math.pow(1, pow)).hex(),
+              1.1,
+              scale(Math.pow(1.1, pow)).hex(),
+              1.2,
+              scale(Math.pow(1.2, pow)).hex(),
             ],
             "fill-opacity": 0.75,
           },
