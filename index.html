@@ -369,20 +369,20 @@
       addDisclaimer(afterMap);
 
       beforeMap.on("load", function () {
-        beforeMap.addSource("hotspots-2019-ytd", {
+        beforeMap.addSource("hotspots-2018", {
           type: "vector",
-          url: "mapbox://hubert-thieriot.90wxvh8w",
+          url: "mapbox://hubert-thieriot.2embkneg",
         });
         beforeMap.addLayer({
-          id: "layer-hotspots-2019-ytd",
-          source: "otspots-2019-ytd",
-          "source-layer": "SO2_donuts_2019-01-01to2019-0-8ryr4v",
+          id: "layer-hotspots-2018",
+          source: "hotspots-2018",
+          "source-layer": "SO2_hotspots_2018-172j0f",
           type: "fill",
           paint: {
             "fill-color": [
               "interpolate",
               ["linear"],
-              ["get", "level"],
+              ["get", "value"],
               0.1,
               scale(Math.pow(0.1, pow)).hex(),
               0.2,
@@ -420,21 +420,21 @@
       });
 
       afterMap.on("load", function () {
-        afterMap.addSource("hotspots-2020-ytd", {
+        afterMap.addSource("hotspots-2019", {
           type: "vector",
-          url: "mapbox://hubert-thieriot.65hijw8s",
+          url: "mapbox://hubert-thieriot.ckejtqssa07as23n3lh5gx6xn-805zw",
         });
 
         afterMap.addLayer({
-          id: "layer-hotspots-2020-ytd",
-          source: "hotspots-2020-ytd",
-          "source-layer": "SO2_donuts_2020-01-01to2020-0-07w158",
+          id: "layer-hotspots-2019",
+          source: "hotspots-2019",
+          "source-layer": "SO2_hotspots_2019",
           type: "fill",
           paint: {
             "fill-color": [
               "interpolate",
               ["linear"],
-              ["get", "level"],
+              ["get", "value"],
               0.1,
               scale(Math.pow(0.1, pow)).hex(),
               0.2,
