@@ -151,6 +151,52 @@
       .popup span {
         display: block;
       }
+      /* Tooltip container */
+      .tooltip {
+        position: relative;
+        display: inline-block;
+        /* border-bottom: 1px dotted black; If you want dots under the hoverable text */
+      }
+
+      /* Tooltip text */
+      .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 280px;
+        background-color: #555;
+        color: #fff;
+        text-align: center;
+        padding: 5px;
+        border-radius: 6px;
+
+        /* Position the tooltip text */
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        right: 30%;
+        margin-right: -80px;
+
+        /* Fade in tooltip */
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      /* Tooltip arrow */
+      .tooltip .tooltiptext::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: #555 transparent transparent transparent;
+      }
+
+      /* Show the tooltip text when you mouse over the tooltip container */
+      .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+      }
     </style>
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-compare/v0.4.0/mapbox-gl-compare.js"></script>
     <link
@@ -295,6 +341,7 @@
         style: "mapbox://styles/mapbox/light-v10",
         center: [0, 0],
         zoom: 2,
+        attributionControl: false,
       });
 
       var afterMap = new mapboxgl.Map({
@@ -302,7 +349,24 @@
         style: "mapbox://styles/mapbox/light-v10",
         center: [0, 0],
         zoom: 2,
+        attributionControl: false,
       });
+
+      function addDisclaimer(map_) {
+        map_.addControl(
+          new mapboxgl.AttributionControl({
+            compact: false,
+            customAttribution:
+              "<div class='tooltip'>Boundaries on this map reflect the data source used" +
+              "<span class='tooltiptext'>Greenpeace and CREA are politically independent and do not take sides in territorial disputes." +
+              " The presentation of political borders contained in this map do not imply the expression of any opinion whatsoever concerning" +
+              " the legal status of any country, territory, city or area or of its authorities, or concerning the delimitation of its frontiers or boundaries.</span></div>",
+          })
+        );
+      }
+
+      addDisclaimer(beforeMap);
+      addDisclaimer(afterMap);
 
       beforeMap.on("load", function () {
         beforeMap.addSource("hotspots-2018", {
@@ -456,58 +520,57 @@
 
         var layers = document.getElementById("menu");
         layers.appendChild(link);
+      }
+      // Popup
+      // Create a popup, but don't add it to the map yet.
+      var popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+      });
 
-        // Popup
-        // Create a popup, but don't add it to the map yet.
-        var popup = new mapboxgl.Popup({
-          closeButton: false,
-          closeOnClick: false,
+      function addPowerplantPopup(map_) {
+        map_.on("mouseenter", "layer-powerplants", function (e) {
+          map_.getCanvas().style.cursor = "pointer";
+          console.log("AAA");
+          var coordinates = e.features[0].geometry.coordinates.slice();
+          var props = e.features[0].properties;
+          var legend = `<div class="popup"><h4>${props.Plant}</h4><span>Fuel: ${props.Fuel}</span><span>Capacity: ${props.Capacity} MW</span></div>`;
+          while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+          }
+          popup.setLngLat(coordinates).setHTML(legend).addTo(map_);
         });
 
-        function addPowerplantPopup(map_) {
-          map_.on("mouseenter", "layer-powerplants", function (e) {
-            map_.getCanvas().style.cursor = "pointer";
-            console.log("AAA");
-            var coordinates = e.features[0].geometry.coordinates.slice();
-            var props = e.features[0].properties;
-            var legend = `<div class="popup"><h4>${props.Plant}</h4><span>Fuel: ${props.Fuel}</span><span>Capacity: ${props.Capacity} MW</span></div>`;
-            while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-              coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-            }
-            popup.setLngLat(coordinates).setHTML(legend).addTo(map_);
-          });
-
-          map_.on("mouseleave", "layer-powerplants", function () {
-            map_.getCanvas().style.cursor = "";
-            popup.remove();
-          });
-        }
-
-        addPowerplantPopup(beforeMap);
-        addPowerplantPopup(afterMap);
-
-        function addHotspotPopup(map_) {
-          map_.on("mouseenter", "layer-hotspots-dots", function (e) {
-            map_.getCanvas().style.cursor = "pointer";
-            console.log("AAA");
-            var coordinates = e.features[0].geometry.coordinates.slice();
-            var props = e.features[0].properties;
-            var legend = `<div class="popup"><h4>${props.NASA_NAME}</h4><span>Type: ${props.SOURCETY}</span><span>Country: ${props.COUNTRY}</span></div>`;
-            while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-              coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-            }
-            popup.setLngLat(coordinates).setHTML(legend).addTo(map_);
-          });
-
-          map_.on("mouseleave", "layer-hotspots-dots", function () {
-            map_.getCanvas().style.cursor = "";
-            popup.remove();
-          });
-        }
-
-        addHotspotPopup(beforeMap);
-        addHotspotPopup(afterMap);
+        map_.on("mouseleave", "layer-powerplants", function () {
+          map_.getCanvas().style.cursor = "";
+          popup.remove();
+        });
       }
+
+      addPowerplantPopup(beforeMap);
+      addPowerplantPopup(afterMap);
+
+      function addHotspotPopup(map_) {
+        map_.on("mouseenter", "layer-hotspots-dots", function (e) {
+          map_.getCanvas().style.cursor = "pointer";
+          console.log("AAA");
+          var coordinates = e.features[0].geometry.coordinates.slice();
+          var props = e.features[0].properties;
+          var legend = `<div class="popup"><h4>${props.NASA_NAME}</h4><span>Type: ${props.SOURCETY}</span><span>Country: ${props.COUNTRY}</span></div>`;
+          while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+          }
+          popup.setLngLat(coordinates).setHTML(legend).addTo(map_);
+        });
+
+        map_.on("mouseleave", "layer-hotspots-dots", function () {
+          map_.getCanvas().style.cursor = "";
+          popup.remove();
+        });
+      }
+
+      addHotspotPopup(beforeMap);
+      addHotspotPopup(afterMap);
     </script>
   </body>
 </html>
