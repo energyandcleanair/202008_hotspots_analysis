@@ -209,15 +209,15 @@
       <div id="after" class="map"></div>
     </div>
     <div id="title-before" class="title title-before">
-      <h2>SO2 Emission Hotspots 2018</h2>
+      <h2>SO2 Hotspots 2018</h2>
     </div>
     <div id="title-before" class="title title-after">
-      <h2>SO2 Emission Hotspots 2019</h2>
+      <h2>SO2 Hotspots 2019</h2>
     </div>
     <div class="legend">
       <nav id="menu"></nav>
       <div id="legend" class="legend-box">
-        <h4>SO2 Emissions [DU]</h4>
+        <h4>SO2 Concentrations [DU]</h4>
       </div>
     </div>
 
@@ -369,20 +369,20 @@
       addDisclaimer(afterMap);
 
       beforeMap.on("load", function () {
-        beforeMap.addSource("hotspots-2018", {
+        beforeMap.addSource("hotspots-2019-ytd", {
           type: "vector",
-          url: "mapbox://hubert-thieriot.2embkneg",
+          url: "mapbox://hubert-thieriot.90wxvh8w",
         });
         beforeMap.addLayer({
-          id: "layer-hotspots-2018",
-          source: "hotspots-2018",
-          "source-layer": "SO2_hotspots_2018-172j0f",
+          id: "layer-hotspots-2019-ytd",
+          source: "otspots-2019-ytd",
+          "source-layer": "SO2_donuts_2019-01-01to2019-0-8ryr4v",
           type: "fill",
           paint: {
             "fill-color": [
               "interpolate",
               ["linear"],
-              ["get", "value"],
+              ["get", "level"],
               0.1,
               scale(Math.pow(0.1, pow)).hex(),
               0.2,
@@ -420,21 +420,21 @@
       });
 
       afterMap.on("load", function () {
-        afterMap.addSource("hotspots-2019", {
+        afterMap.addSource("hotspots-2020-ytd", {
           type: "vector",
-          url: "mapbox://hubert-thieriot.ckejtqssa07as23n3lh5gx6xn-805zw",
+          url: "mapbox://hubert-thieriot.65hijw8s",
         });
 
         afterMap.addLayer({
-          id: "layer-hotspots-2019",
-          source: "hotspots-2019",
-          "source-layer": "SO2_hotspots_2019",
+          id: "layer-hotspots-2020-ytd",
+          source: "hotspots-2020-ytd",
+          "source-layer": "SO2_donuts_2020-01-01to2020-0-07w158",
           type: "fill",
           paint: {
             "fill-color": [
               "interpolate",
               ["linear"],
-              ["get", "value"],
+              ["get", "level"],
               0.1,
               scale(Math.pow(0.1, pow)).hex(),
               0.2,
