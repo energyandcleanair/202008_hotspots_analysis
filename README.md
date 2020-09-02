@@ -9,6 +9,6 @@ Data:
 - [Year-on-year predictions (RDS)](results/data/omi_predictions.RDS)
 - [Year-on-year predictions (csv)](results/data/omi_predictions.csv)
 
-![predictions_iqr](results/plots/prediction_2020_iqr.png?raw=true)
-![predictions_zoom](results/plots/prediction_2020_zoom.png?raw=true)
-![prediction_quality](results/plots/pearson_sourcetype.png?raw=true)
+![total](results/plots/tota_emissions_2020.png?raw=true)
+![yoy](results/plots/yoy_variations_2020.png?raw=true)
+

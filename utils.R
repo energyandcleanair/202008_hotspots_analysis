@@ -53,10 +53,12 @@ utils.values_at_point <- function(file, points){
 
 utils.add_predicted_and_ci <- function(d.omi.pred, m){
 
-  predicted <- predict(m, d.omi.pred, interval = 'confidence') #If 'prediction', interval is significantly larger. Uncertain which one is the most relevant here. It answers different questions.
+  predicted <- predict(m, d.omi.pred, interval = 'confidence') #We're looking at the confidence interval
+  # of the expected value, hence 'confidence' (vs 'prediction')
   d.omi.pred$predicted <- pmax(predicted[,'fit'], 0)
   d.omi.pred$sigma_eq_lm = (predicted[,'upr']-predicted[,'lwr'])/2/1.96
 
+  # We assume the NASA error and the current model residuals are independent
   # Variance equivalent = variance due to lm + variance due to NASA uncertainty
   d.omi.pred %>% mutate(predicted_upr=predicted + 1.96*sqrt(sigma_eq_lm^2 + sigma_original^2),
                         predicted_lwr=predicted - 1.96*sqrt(sigma_eq_lm^2 + sigma_original^2))
@@ -127,12 +129,7 @@ utils.CI.Fieller = function(theta1.hat, sd1.hat, year_1,
 #
 # }
 
-utils.prediction_ytd <- function(d.all.year, d.omi, date_to_year, n_sigma=1){
-
-  # n_sigma: roughly equivalent to monte carlo? Since there is uncertainty in
-  # the original dataset, we generate many different versions of it based on the sigma
-  # indicated (n_sigma per source x year)
-  # NOTE: doesn't have any impact on standard error. Need to think of a better approach
+utils.prediction_ytd <- function(d.all.year, d.omi, date_to_year){
 
   # We train models on d.all.year for every calendar year (the only periods we have Measures data for)
   # And then apply to different year cutting (e.g. August to July)
@@ -145,20 +142,47 @@ utils.prediction_ytd <- function(d.all.year, d.omi, date_to_year, n_sigma=1){
 
   dw <- d %>%
     mutate(radius_km = paste0('r', radius_km)) %>%
-    dplyr::select(-count_omi_sgt_0) %>%
+    dplyr::select(-count_omi) %>%
     spread(radius_km, value_omi) %>%
     mutate(variation=value_original-value_original_mean)
 
-  if(n_sigma>1){
-    dw %>%
-      group_by(NUMBER, year) %>%
-      summarise(value_original=list(pmax(0,rnorm(n=n_sigma, mean=value_original, sd=sigma_original)))) %>%
-      tidyr::unnest(value_original) %>%
-      right_join(dw %>% dplyr::select(-c(value_original))) -> dw
-  }
-
   lm(value_original ~ value_original_mean + (r50 + r200):(SOURCETY + ELEVATION), data=dw) -> m
   summary(m)
+
+  # We average sigma based on cutoff date
+  days <- function(year_start, year_end){
+    seq(as.Date(paste0(year_start,"-01-01")), as.Date(paste0(year_end,"-12-31")), by="+1 day")
+  }
+
+  d.meta <- d %>%
+    ungroup() %>%
+    distinct(NUMBER, SOURCETY, COUNTRY, ELEVATION, value_original_mean, sigma_original) %>%
+    tidyr::crossing(date=days(2005,2020)) %>%
+    mutate(year_offsetted=date_to_year(date)) %>%
+    group_by(NUMBER, SOURCETY, COUNTRY, ELEVATION, value_original_mean, year_offsetted) %>%
+    summarise(sigma_original=mean(sigma_original, na.rm=T))
+
+  d.omi.pred <- d.omi %>%
+    mutate(year_offsetted= date_to_year(date)) %>%
+    filter(!is.na(year_offsetted),
+           year_offsetted > lubridate::year(min(date)),
+           year_offsetted < 2021) %>%
+    group_by(NUMBER, year_offsetted, radius_km) %>%
+    summarise(value_omi=mean(value, na.rm=T)) %>%
+    mutate(radius_km = paste0('r', radius_km)) %>%
+    spread(radius_km, value_omi) %>%
+    left_join(d.meta)
+
+  d.omi.pred %<>% utils.add_predicted_and_ci(m)
+  d.omi.pred <- d.omi.pred %>%
+    group_by(NUMBER) %>%
+    arrange(year_offsetted) %>%
+    mutate(ratio_yoy=ifelse(lag(year_offsetted)==year_offsetted-1,
+                            (predicted-lag(predicted))/lag(predicted),
+                            NA)) %>%
+    mutate(year_offsetted_text = paste(year_offsetted,"/",year_offsetted-1))
+
+  d.omi.pred$ratio_yoy[is.infinite(d.omi.pred$ratio_yoy)] <- 100
 
   # Other attempts or baselines
   # summary(lm(value_original ~ value_original_mean + (r50 + r200)*(SOURCETY + ELEVATION), data=dw))
@@ -190,29 +214,27 @@ utils.prediction_ytd <- function(d.all.year, d.omi, date_to_year, n_sigma=1){
   #             x=NULL)
   # ggsave(file.path("results","plots","pearson_sourcetype.png"), plot=plt_pearson, width=12, height=10)
 
-  d.omi.pred <- d.omi %>%
-    mutate(year_offsetted= date_to_year(date)) %>%
-    filter(!is.na(year_offsetted),
-           year_offsetted > lubridate::year(min(date)),
-           year_offsetted < 2021) %>%
-    group_by(NUMBER, year_offsetted, radius_km) %>%
-    summarise(value_omi=mean(value, na.rm=T), count=n()) %>%
-    mutate(radius_km = paste0('r', radius_km)) %>%
-    spread(radius_km, value_omi) %>%
-    left_join(d %>% ungroup() %>% distinct(NUMBER, SOURCETY, COUNTRY, ELEVATION, value_original_mean, sigma_original))
 
-  d.omi.pred %<>% utils.add_predicted_and_ci(m)
-  d.omi.pred <- d.omi.pred %>%
-    group_by(NUMBER) %>%
+  return(d.omi.pred)
+}
+
+utils.table_yoy <- function(d.omi.pred, group_by_cols=c("SOURCETY")){
+  d <- d.omi.pred
+
+  dyoy <- d %>%
+    group_by_at(c(group_by_cols, "year_offsetted")) %>%
+    summarise(predicted=sum(predicted, na.rm=T)) %>%
+    group_by_at(group_by_cols) %>%
     arrange(year_offsetted) %>%
     mutate(ratio_yoy=ifelse(lag(year_offsetted)==year_offsetted-1,
                             (predicted-lag(predicted))/lag(predicted),
                             NA)) %>%
     mutate(year_offsetted_text = paste(year_offsetted,"/",year_offsetted-1))
 
-  d.omi.pred$ratio_yoy[is.infinite(d.omi.pred$ratio_yoy)] <- 100
-
-  return(d.omi.pred)
+  dyoy %>%
+    filter(year_offsetted==2020) %>%
+    dplyr::select_at(c(group_by_cols, "year_offsetted", "ratio_yoy")) %>%
+    mutate(ratio_yoy=paste0(round(ratio_yoy*100,1), "%"))
 }
 
 
@@ -243,5 +265,6 @@ utils.country_table_yoy <- function(d.omi.pred, group_by_cols=c("COUNTRY")){
   dyoy %>%
     filter(COUNTRY %in% selected,
            year_offsetted==2020) %>%
-    dplyr::select_at(c(group_by_cols, "year_offsetted", "ratio_yoy"))
+    dplyr::select_at(c(group_by_cols, "year_offsetted", "ratio_yoy")) %>%
+    mutate(ratio_yoy=paste0(round(ratio_yoy*100,1), "%"))
 }
