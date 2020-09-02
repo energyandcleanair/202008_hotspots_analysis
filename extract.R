@@ -7,7 +7,7 @@ extract_omi_data <- function(){
 
   print("Creating OMI value files. Can take a few hours if not days...")
   radii_km <- c(2, 20, 200)
-  d.measures <- utils.read_points()
+  d.measures.wide <- utils.read_points()
 
   pts <- do.call("rbind", lapply(radii_km, utils.buffer, points=d.measures.wide))
 
