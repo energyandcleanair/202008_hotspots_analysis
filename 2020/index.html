@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>SO2 Hotspots 2019</title>
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <script src="https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.js"></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.1.0/chroma.min.js"
+      integrity="sha512-yocoLferfPbcwpCMr8v/B0AB4SWpJlouBwgE0D3ZHaiP1nuu5djZclFEIj9znuqghaZ3tdCMRrreLoM8km+jIQ=="
+      crossorigin="anonymous"
+    ></script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v1.12.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+
+      body {
+        overflow: hidden;
+      }
+
+      body * {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+      }
+
+      .map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+
+      .title {
+        background-color: #ffffffa0;
+        border-radius: 3px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        font: 12px/20px "Helvetica Neue", Arial, Helvetica, sans-serif;
+        padding: 10px;
+        position: absolute;
+        z-index: 1;
+      }
+
+      .title-before {
+        top: 30px;
+        left: 10px;
+      }
+
+      .title-after {
+        top: 30px;
+        right: 10px;
+      }
+
+      .title h2 {
+        color: "black";
+        margin: 0;
+      }
+
+      .legend {
+        position: absolute;
+        bottom: 30px;
+        right: 10px;
+      }
+      .legend-box {
+        background-color: #fff;
+        border-radius: 3px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        font: 12px/20px "Helvetica Neue", Arial, Helvetica, sans-serif;
+        padding: 10px;
+        margin-top: 10px;
+        z-index: 1;
+      }
+
+      .legend-box h4 {
+        margin: 0 0 10px;
+      }
+
+      .legend-box div span {
+        border-radius: 50%;
+        display: inline-block;
+        height: 10px;
+        margin-right: 5px;
+        width: 10px;
+      }
+
+      #menu {
+        width: 100%;
+        background: #fff;
+        z-index: 1;
+        /* top: 10px; */
+        /* right: 10px; */
+        border-radius: 3px;
+        /* width: 120px; */
+        /* border: 1px solid rgba(0, 0, 0, 0.4); */
+        font-family: "Open Sans", sans-serif;
+      }
+
+      #menu a {
+        font-size: 13px;
+        color: #404040;
+        display: block;
+        margin: 0;
+        padding: 0;
+        padding: 10px;
+        text-decoration: none;
+        /* border-bottom: 1px solid rgba(0, 0, 0, 0.25); */
+        text-align: center;
+      }
+
+      #menu a:last-child {
+        border: none;
+      }
+
+      #menu a:hover {
+        background-color: #f8f8f8;
+        color: #404040;
+      }
+
+      #menu a.active {
+        background-color: #3887be;
+        color: #ffffff;
+      }
+
+      #menu a.active:hover {
+        background: #3074a4;
+      }
+
+      .popup h4 {
+        margin: 0;
+      }
+
+      .popup span {
+        display: block;
+      }
+      /* Tooltip container */
+      .tooltip {
+        position: relative;
+        display: inline-block;
+        /* border-bottom: 1px dotted black; If you want dots under the hoverable text */
+      }
+
+      /* Tooltip text */
+      .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 280px;
+        background-color: #555;
+        color: #fff;
+        text-align: center;
+        padding: 5px;
+        border-radius: 6px;
+
+        /* Position the tooltip text */
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        right: 30%;
+        margin-right: -80px;
+
+        /* Fade in tooltip */
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      /* Tooltip arrow */
+      .tooltip .tooltiptext::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: #555 transparent transparent transparent;
+      }
+
+      /* Show the tooltip text when you mouse over the tooltip container */
+      .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+      }
+    </style>
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-compare/v0.4.0/mapbox-gl-compare.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-compare/v0.4.0/mapbox-gl-compare.css"
+      type="text/css"
+    />
+    <div id="comparison-container">
+      <div id="before" class="map"></div>
+      <div id="after" class="map"></div>
+    </div>
+    <div id="title-before" class="title title-before">
+      <h2>SO2 Emission Hotspots 2018</h2>
+    </div>
+    <div id="title-before" class="title title-after">
+      <h2>SO2 Emission Hotspots 2019</h2>
+    </div>
+    <div class="legend">
+      <nav id="menu"></nav>
+      <div id="legend" class="legend-box">
+        <h4>SO2 Emissions [DU]</h4>
+      </div>
+    </div>
+
+    <script>
+      //*********************
+      // Display parameters
+      //*********************
+
+      // Hotspots
+      var hotspot_radius = 3;
+      var color_smelter = "#260ff5";
+      var color_volcano = "#3bf7db";
+      var color_oilgas = "#f561c6";
+      var color_power = "#222";
+
+      // Powerplants
+      var color_powerplant_coal = "black";
+      var color_powerplant_oil = "#444";
+      var color_powerplant_gas = "darkgreen";
+
+      // Emissions
+      var min = 0.05;
+      var max = 1;
+      //   var pow = 0.7;
+      //   var scale = chroma
+      //     .scale(["yellow", "navy"])
+      //     .mode("lch")
+      //     .domain([min, Math.pow(max, pow)]);
+      var pow = 1;
+      var scale = chroma
+        .scale([
+          "#fcfdbf",
+          "#f8d68b",
+          "#efa961",
+          "#ce6170",
+          "#812581",
+          "#000004",
+        ])
+        .domain([0.05, 0.1, 0.2, 0.4, 0.6, 1]);
+
+      var scale_element = document.getElementById("legend");
+      [min, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1].forEach(function (i) {
+        scale_element.innerHTML +=
+          '<div><span style="background-color:' +
+          scale(Math.pow(i, pow)).hex() +
+          '"></span>' +
+          i +
+          "</div>";
+      });
+
+      // Adding elements
+      var hotspots_name = "hotspots-dots";
+      var hotspots_dots_source = {
+        type: "vector",
+        url: "mapbox://hubert-thieriot.2ydcm5hc",
+      };
+
+      var hotspots_dots_layer = {
+        id: "layer-hotspots-dots",
+        source: "hotspots-dots",
+        "source-layer": "NASA_hotspots-cw8hvu",
+        type: "circle",
+        layout: {
+          visibility: "none",
+        },
+        paint: {
+          "circle-radius": hotspot_radius,
+          "circle-color": [
+            "match",
+            ["get", "SOURCETY"],
+            ["Power Plant"],
+            color_power,
+            ["Volcano"],
+            color_volcano,
+            ["Smelter"],
+            color_smelter,
+            ["Oil and Gas"],
+            color_oilgas,
+            "#000000",
+          ],
+        },
+      };
+
+      var powerplants_name = "powerplants";
+      var powerplants_source = {
+        type: "vector",
+        url: "mapbox://hubert-thieriot.3utfy59m",
+      };
+
+      var powerplants_layer = {
+        id: "layer-powerplants",
+        source: powerplants_name,
+        "source-layer": "Power_plants-4kwf88",
+        type: "circle",
+        layout: {
+          visibility: "none",
+        },
+        paint: {
+          "circle-radius": hotspot_radius,
+          "circle-color": [
+            "match",
+            ["get", "Fuel"],
+            ["Coal"],
+            color_powerplant_coal,
+            ["Oil"],
+            color_powerplant_oil,
+            ["Gas"],
+            color_powerplant_gas,
+            ["Petcoke"], //only one or two in the US
+            color_powerplant_coal,
+            "#000000",
+          ],
+        },
+      };
+
+      mapboxgl.accessToken =
+        "pk.eyJ1IjoiaHViZXJ0LXRoaWVyaW90IiwiYSI6ImNrZWpydm1yZjFhYWwydXFiNXp2YzVhaXcifQ.j61s7IWe1FpvaEr2fHQQbA";
+
+      var beforeMap = new mapboxgl.Map({
+        container: "before",
+        style: "mapbox://styles/mapbox/light-v10",
+        center: [0, 0],
+        zoom: 2,
+        attributionControl: false,
+      });
+
+      var afterMap = new mapboxgl.Map({
+        container: "after",
+        style: "mapbox://styles/mapbox/light-v10",
+        center: [0, 0],
+        zoom: 2,
+        attributionControl: false,
+      });
+
+      function addDisclaimer(map_) {
+        map_.addControl(
+          new mapboxgl.AttributionControl({
+            compact: false,
+            customAttribution:
+              "<div class='tooltip'>Boundaries on this map reflect the data source used" +
+              "<span class='tooltiptext'>Greenpeace and CREA are politically independent and do not take sides in territorial disputes." +
+              " The presentation of political borders contained in this map do not imply the expression of any opinion whatsoever concerning" +
+              " the legal status of any country, territory, city or area or of its authorities, or concerning the delimitation of its frontiers or boundaries.</span></div>",
+          })
+        );
+      }
+
+      addDisclaimer(beforeMap);
+      addDisclaimer(afterMap);
+
+      beforeMap.on("load", function () {
+        beforeMap.addSource("hotspots-2018", {
+          type: "vector",
+          url: "mapbox://hubert-thieriot.2embkneg",
+        });
+        beforeMap.addLayer({
+          id: "layer-hotspots-2018",
+          source: "hotspots-2018",
+          "source-layer": "SO2_hotspots_2018-172j0f",
+          type: "fill",
+          paint: {
+            "fill-color": [
+              "interpolate",
+              ["linear"],
+              ["get", "value"],
+              0.1,
+              scale(Math.pow(0.1, pow)).hex(),
+              0.2,
+              scale(Math.pow(0.2, pow)).hex(),
+              0.3,
+              scale(Math.pow(0.3, pow)).hex(),
+              0.4,
+              scale(Math.pow(0.4, pow)).hex(),
+              0.5,
+              scale(Math.pow(0.5, pow)).hex(),
+              0.6,
+              scale(Math.pow(0.6, pow)).hex(),
+              0.7,
+              scale(Math.pow(0.7, pow)).hex(),
+              0.8,
+              scale(Math.pow(0.8, pow)).hex(),
+              0.9,
+              scale(Math.pow(0.9, pow)).hex(),
+              1,
+              scale(Math.pow(1, pow)).hex(),
+              1.1,
+              scale(Math.pow(1.1, pow)).hex(),
+              1.2,
+              scale(Math.pow(1.2, pow)).hex(),
+            ],
+            "fill-opacity": 0.75,
+          },
+        });
+
+        beforeMap.addSource(hotspots_name, hotspots_dots_source);
+        beforeMap.addLayer(hotspots_dots_layer);
+
+        beforeMap.addSource(powerplants_name, powerplants_source);
+        beforeMap.addLayer(powerplants_layer);
+      });
+
+      afterMap.on("load", function () {
+        afterMap.addSource("hotspots-2019", {
+          type: "vector",
+          url: "mapbox://hubert-thieriot.ckejtqssa07as23n3lh5gx6xn-805zw",
+        });
+
+        afterMap.addLayer({
+          id: "layer-hotspots-2019",
+          source: "hotspots-2019",
+          "source-layer": "SO2_hotspots_2019",
+          type: "fill",
+          paint: {
+            "fill-color": [
+              "interpolate",
+              ["linear"],
+              ["get", "value"],
+              0.1,
+              scale(Math.pow(0.1, pow)).hex(),
+              0.2,
+              scale(Math.pow(0.2, pow)).hex(),
+              0.3,
+              scale(Math.pow(0.3, pow)).hex(),
+              0.4,
+              scale(Math.pow(0.4, pow)).hex(),
+              0.5,
+              scale(Math.pow(0.5, pow)).hex(),
+              0.6,
+              scale(Math.pow(0.6, pow)).hex(),
+              0.7,
+              scale(Math.pow(0.7, pow)).hex(),
+              0.8,
+              scale(Math.pow(0.8, pow)).hex(),
+              0.9,
+              scale(Math.pow(0.9, pow)).hex(),
+              1,
+              scale(Math.pow(1, pow)).hex(),
+              1.1,
+              scale(Math.pow(1.1, pow)).hex(),
+              1.2,
+              scale(Math.pow(1.2, pow)).hex(),
+            ],
+            "fill-opacity": 0.75,
+          },
+        });
+
+        afterMap.addSource(hotspots_name, hotspots_dots_source);
+        afterMap.addLayer(hotspots_dots_layer);
+
+        afterMap.addSource(powerplants_name, powerplants_source);
+        afterMap.addLayer(powerplants_layer);
+      });
+
+      // A selector or reference to HTML element
+      var container = "#comparison-container";
+
+      var map = new mapboxgl.Compare(beforeMap, afterMap, container, {
+        // Set this to enable comparing two maps by mouse movement:
+        // mousemove: true
+      });
+
+      // enumerate ids of the layers
+      var toggleableLayerIds = [
+        { id: "layer-hotspots-dots", name: "NASA Hotspots" },
+        { id: "layer-powerplants", name: "Fossil Fueled Power Plants" },
+      ];
+
+      // set up the corresponding toggle button for each layer
+      for (var i = 0; i < toggleableLayerIds.length; i++) {
+        var id = toggleableLayerIds[i].id;
+        var name = toggleableLayerIds[i].name;
+
+        var link = document.createElement("a");
+        link.href = "#";
+        link.className = "";
+        link.textContent = name;
+        link.id = id;
+
+        link.onclick = function (e) {
+          var clickedLayer = this.id;
+          e.preventDefault();
+          e.stopPropagation();
+
+          var visibility = beforeMap.getLayoutProperty(
+            clickedLayer,
+            "visibility"
+          );
+
+          // toggle layer visibility by changing the layout object's visibility property
+          if (visibility === "visible") {
+            beforeMap.setLayoutProperty(clickedLayer, "visibility", "none");
+            afterMap.setLayoutProperty(clickedLayer, "visibility", "none");
+            this.className = "";
+          } else {
+            this.className = "active";
+            beforeMap.setLayoutProperty(clickedLayer, "visibility", "visible");
+            afterMap.setLayoutProperty(clickedLayer, "visibility", "visible");
+          }
+        };
+
+        var layers = document.getElementById("menu");
+        layers.appendChild(link);
+      }
+      // Popup
+      // Create a popup, but don't add it to the map yet.
+      var popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+      });
+
+      function addPowerplantPopup(map_) {
+        map_.on("mouseenter", "layer-powerplants", function (e) {
+          map_.getCanvas().style.cursor = "pointer";
+          console.log("AAA");
+          var coordinates = e.features[0].geometry.coordinates.slice();
+          var props = e.features[0].properties;
+          var legend = `<div class="popup"><h4>${props.Plant}</h4><span>Fuel: ${props.Fuel}</span><span>Capacity: ${props.Capacity} MW</span></div>`;
+          while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+          }
+          popup.setLngLat(coordinates).setHTML(legend).addTo(map_);
+        });
+
+        map_.on("mouseleave", "layer-powerplants", function () {
+          map_.getCanvas().style.cursor = "";
+          popup.remove();
+        });
+      }
+
+      addPowerplantPopup(beforeMap);
+      addPowerplantPopup(afterMap);
+
+      function addHotspotPopup(map_) {
+        map_.on("mouseenter", "layer-hotspots-dots", function (e) {
+          map_.getCanvas().style.cursor = "pointer";
+          console.log("AAA");
+          var coordinates = e.features[0].geometry.coordinates.slice();
+          var props = e.features[0].properties;
+          var legend = `<div class="popup"><h4>${props.NASA_NAME}</h4><span>Type: ${props.SOURCETY}</span><span>Country: ${props.COUNTRY}</span></div>`;
+          while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+          }
+          popup.setLngLat(coordinates).setHTML(legend).addTo(map_);
+        });
+
+        map_.on("mouseleave", "layer-hotspots-dots", function () {
+          map_.getCanvas().style.cursor = "";
+          popup.remove();
+        });
+      }
+
+      addHotspotPopup(beforeMap);
+      addHotspotPopup(afterMap);
+    </script>
+  </body>
+</html>
