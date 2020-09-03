@@ -151,14 +151,13 @@
       .popup span {
         display: block;
       }
-      /* Tooltip container */
+
+      /* Boundaries tooltip */
       .tooltip {
         position: relative;
         display: inline-block;
         /* border-bottom: 1px dotted black; If you want dots under the hoverable text */
       }
-
-      /* Tooltip text */
       .tooltip .tooltiptext {
         visibility: hidden;
         width: 280px;
@@ -179,8 +178,6 @@
         opacity: 0;
         transition: opacity 0.3s;
       }
-
-      /* Tooltip arrow */
       .tooltip .tooltiptext::after {
         content: "";
         position: absolute;
@@ -191,11 +188,33 @@
         border-style: solid;
         border-color: #555 transparent transparent transparent;
       }
-
-      /* Show the tooltip text when you mouse over the tooltip container */
       .tooltip:hover .tooltiptext {
         visibility: visible;
         opacity: 1;
+      }
+
+      /* Logos and intro */
+      .logos-box {
+        background-color: #fff;
+        border-radius: 3px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        font: 12px/20px "Helvetica Neue", Arial, Helvetica, sans-serif;
+        padding: 10px;
+        margin-top: 10px;
+        position: absolute;
+        bottom: 30px;
+        left: 10px;
+        width: 260px;
+      }
+      .logos-box .intro {
+        margin-bottom: 10px;
+        align: left;
+      }
+      .logos {
+        display: flex;
+      }
+      .logos a {
+        padding: 5px;
       }
     </style>
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-compare/v0.4.0/mapbox-gl-compare.js"></script>
@@ -218,6 +237,24 @@
       <nav id="menu"></nav>
       <div id="legend" class="legend-box">
         <h4>SO2 Concentrations [DU]</h4>
+      </div>
+    </div>
+
+    <div class="logos-box">
+      <div class="intro">
+        This map is part of the
+        <a href="">Global SO2 Emission Hotspot Database</a> jointly written by
+        CREA and Greenpeace India.
+      </div>
+      <div class="logos">
+        <a href="https://energyandcleanair.org">
+          <img
+            src="https://energyandcleanair.org/wp/wp-content/uploads/2020/01/CREA-logo.svg"
+            height="30px"
+        /></a>
+        <a href="https://www.greenpeace.org/india/en/">
+          <img src="imgs/greenpeace.svg" height="25px" style="margin-top: 2px"
+        /></a>
       </div>
     </div>
 
@@ -357,7 +394,7 @@
           new mapboxgl.AttributionControl({
             compact: false,
             customAttribution:
-              "<div class='tooltip'>Boundaries on this map reflect the data source used" +
+              "<div class='tooltip'>Boundaries on this map reflect the data source used (OpenStreetMap)" +
               "<span class='tooltiptext'>Greenpeace and CREA are politically independent and do not take sides in territorial disputes." +
               " The presentation of political borders contained in this map do not imply the expression of any opinion whatsoever concerning" +
               " the legal status of any country, territory, city or area or of its authorities, or concerning the delimitation of its frontiers or boundaries.</span></div>",

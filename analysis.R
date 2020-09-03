@@ -13,6 +13,7 @@ source('./utils.R')
 source('./plots.R')
 source('./extract.R')
 file_values <- file.path("results", "values.RDS")
+file_values_202008 <- file.path("results", "values_202008.RDS")
 
 dir.create(file.path("results","plots"), recursive=T, showWarnings=F)
 dir.create(file.path("results","data"), recursive=T, showWarnings=F)
@@ -36,7 +37,12 @@ if(!file.exists(file_values)){
   extract_omi_data()
 }
 
+
 d.omi <- readRDS(file_values) %>%
+  filter(date < "2020-08-01") %>%
+  rbind(readRDS(file_values_202008))
+
+d.omi <- d.omi %>%
   mutate(
     # value = replace_na(value, 0), #THAT WAS THE BIG MISTAKE... KEEP COMMENTED
     radius_km = factor(radius_km, ordered=T)) %>%
@@ -74,25 +80,25 @@ saveRDS(d.all.year, file.path("results","hotspots_omi_vs_measures.RDS"))
 # Predictions: emission from concentration  -------------------------------------------
 # Create prediction data set on offsetted-year values
 date_to_year_offseted <- function(date){
-  lubridate::year(date - lubridate::days(lubridate::yday("0000-08-01")) + lubridate::years(1))
+  lubridate::year(date - lubridate::days(lubridate::yday("0000-09-01")) + lubridate::years(1))
 }
 
 d.omi.pred <- utils.prediction_ytd(d.all.year, d.omi, date_to_year=date_to_year_offseted)
 saveRDS(d.omi.pred, file.path("results","data","omi_predictions.RDS"))
 write.csv(d.omi.pred, file.path("results","data","omi_predictions.csv"), row.names = F)
 
-(p1 <- plot_total_emissions(d.omi.pred, period_name="August-July"))
+(p1 <- plot_total_emissions(d.omi.pred, period_name="September-August"))
 ggsave(file.path("results","plots","total_emissions_2020.png"), plot=p1, width=12, height=6)
 
-(p2 <- plot_yoy_variations(d.omi.pred, period_name="August-July"))
+(p2 <- plot_yoy_variations(d.omi.pred, period_name="September-August"))
 ggsave(file.path("results","plots","yoy_variations_2020.png"), plot=p2, width=12, height=6)
 
 utils.table_yoy(d.omi.pred)
 t.yoy <- utils.country_table_yoy(d.omi.pred)
-write.csv(t.yoy, file.path("results","data","yoy.augjuly.csv"), row.names=F)
+write.csv(t.yoy, file.path("results","data","yoy.sepaug.csv"), row.names=F)
 
 t.yoy.sector <- utils.country_table_yoy(d.omi.pred, group_by_cols = c("COUNTRY","SOURCETY"))
-write.csv(t.yoy.sector, file.path("results","data","yoy.augjuly.sector.csv"), row.names=F)
+write.csv(t.yoy.sector, file.path("results","data","yoy.sepaug.sector.csv"), row.names=F)
 
 
 # Jan - July ------------------------------------------------------------

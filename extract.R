@@ -17,5 +17,5 @@ extract_omi_data <- function(){
   d <- do.call("rbind", pbapply::pblapply(files, utils.values_at_point, points=pts))
   d.omi <- d %>% dplyr::select(NUMBER, radius_km, value, date)
 
-  saveRDS(d.omi, "value_202008.RDS")
+  saveRDS(d.omi, "values_202008.RDS")
 }
