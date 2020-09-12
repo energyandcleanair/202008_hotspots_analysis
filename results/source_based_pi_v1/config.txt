@@ -1,0 +1,4 @@
+value_original ~ factor(NUMBER) + factor(NUMBER):(r10 + r50 + 
+    r100 + r200)
+[1] "Interval: prediction"
+[1] "Cutoff date: 0000-09-01"

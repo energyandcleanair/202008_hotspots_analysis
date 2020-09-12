@@ -64,7 +64,7 @@ utils.add_predicted_and_ci <- function(d.omi.pred, m, interval, lm_per_source){
 
   # We add predicted values and its confidence interval to d.omi.pred
   # Note: the confidence interval stems from both uncertainties:
-  # NASA MEaSUREs ("sigma_original") and correlation ("sigma_lm")
+  # NASA MEaSUREs ("sigma_nasa") and correlation ("sigma_lm")
   # https://math.stackexchange.com/questions/1387586/how-to-propagate-uncertainties-in-the-dependent-variable-when-doing-linear-regre
 
   predict_and_ci <- function(m, d, interval){
@@ -80,8 +80,8 @@ utils.add_predicted_and_ci <- function(d.omi.pred, m, interval, lm_per_source){
 
     # We assume the NASA error and the current model residuals are independent
     # Variance equivalent = variance due to lm + variance due to NASA uncertainty
-    d %>% mutate(predicted_upr=predicted + 1.96*sqrt(sigma_lm^2 + sigma_original^2),
-                 predicted_lwr=predicted - 1.96*sqrt(sigma_lm^2 + sigma_original^2))
+    d %>% mutate(predicted_upr=predicted + 1.96*sqrt(sigma_lm^2 + sigma_nasa^2),
+                 predicted_lwr=predicted - 1.96*sqrt(sigma_lm^2 + sigma_nasa^2))
   }
 
   if(lm_per_source){
@@ -136,38 +136,11 @@ utils.CI.Fieller = function(theta1.hat, sd1.hat, year_1,
   return(res)
 
 }
-## END CI Fieller
-#
-# utils.add_yoy_with_ci <- function(d.omi.pred, group_by_cols=c("SOURCETY")){
-#
-#   d.omi.pred %>%
-#     filter(!is.na(SOURCETY), year_offsetted>=2000) %>%
-#     group_by_at(c(group_by_cols, "year_offsetted")) %>%
-#     summarise(value=sum(predicted, na.rm=T),
-#               lwr=sum(predicted_lwr, na.rm=T),
-#               upr=sum(predicted_upr, na.rm=T),
-#               sigma_eq_lm=sqrt()) %>%
-#     group_by_at(group_by_cols) %>%
-#     arrange(year_offsetted) %>%
-#     mutate(ratio_yoy_dfr==pmap(list(lag(value), lag(), year_1,
-#                                     theta2.hat, sd2.hat, year_2)ifelse(lag(year_offsetted)==year_offsetted-1,
-#                             (value-lag(value))/lag(value),
-#                             NA),
-#            ratio_yoy_lwr=ifelse(lag(year_offsetted)==year_offsetted-1,
-#                                 (lwr-lag(value))/lag(value),
-#                                 NA),
-#            ratio_yoy_upr=ifelse(lag(year_offsetted)==year_offsetted-1,
-#                                 (upr-lag(value))/lag(value),
-#                                 NA))
-#
-#     r <- utils.CI.Fieller(value_before, sigma_before, value_after, sigma_after, 0.05)
-#
-# }
 
 utils.prediction_ytd <- function(d.all.year, d.omi, date_to_year, formula, interval, dir_results, lm_per_source){
 
   # We train models on d.all.year for every calendar year (the only periods we have Measures data for)
-  # And then apply to different year cutting (e.g. August to July)
+  # And then apply to different year cutting (e.g. September to August)
   d <- d.all.year %>% mutate(NUMBER=as.integer(NUMBER), year=as.integer(year))
   d  %<>% filter(SOURCETY != "Volcano")
   d  %<>% distinct(NUMBER, year, value_original) %>%
@@ -224,13 +197,13 @@ utils.prediction_ytd <- function(d.all.year, d.omi, date_to_year, formula, inter
 
   d.meta <- d  %>%
     ungroup() %>%
-    distinct(NUMBER, SOURCETY, COUNTRY, ELEVATION, year, value_original_mean, sigma_original) %>%
+    distinct(NUMBER, SOURCETY, COUNTRY, ELEVATION, year, value_original_mean, sigma_nasa) %>%
     rowwise() %>%
     mutate(date=as.list(purrr::map_dfr(year, days_of_year))) %>%
     tidyr::unnest(cols=c(date)) %>%
     mutate(year_offsetted=date_to_year(date)) %>%
     group_by(NUMBER, SOURCETY, COUNTRY, ELEVATION, value_original_mean, year_offsetted) %>%
-    summarise(sigma_original=mean(sigma_original, na.rm=T))
+    summarise(sigma_nasa=mean(sigma_nasa, na.rm=T))
 
   d.omi.pred <- d.omi %>%
     mutate(year_offsetted= date_to_year(date)) %>%
@@ -260,7 +233,7 @@ utils.prediction_ytd <- function(d.all.year, d.omi, date_to_year, formula, inter
 
 utils.table_total <- function(d.omi.pred, group_by_cols=c("SOURCETY")){
   d.omi.pred %>%
-    mutate(variance=sigma_lm^2 + sigma_original^2) %>%
+    mutate(variance=sigma_lm^2 + sigma_nasa^2) %>%
     filter(!is.na(SOURCETY)) %>%
     group_by_at(c(group_by_cols, "year_offsetted")) %>%
     summarise(value=sum(predicted, na.rm=T),
@@ -277,7 +250,7 @@ utils.table_yoy <- function(d.omi.pred, group_by_cols=c("SOURCETY")){
     d %>%
     filter(!is.na(SOURCETY)) %>%
     filter(year_offsetted>=2007) %>% # First year creates troubles
-    mutate(variance=sigma_lm^2 + sigma_original^2) %>%
+    mutate(variance=sigma_lm^2 + sigma_nasa^2) %>%
     group_by_at(c(group_by_cols, "year_offsetted")) %>%
     summarise(predicted=sum(predicted, na.rm=T),
               variance=sum(variance, na.rm=T)) %>%
@@ -323,6 +296,7 @@ utils.table_yoy <- function(d.omi.pred, group_by_cols=c("SOURCETY")){
 
 utils.table_yoy_w_europe <- function(d.omi.pred, group_by_cols=c("COUNTRY")){
 
+  # For tables in the report
   selected <- c("India", "Russia", "China", "Mexico", "South Africa", "Saudi Arabia", "Europe", "Australia")
 
   europe <- c("Austria", "Belgium", "Bulgaria", "Croatia", "Republic of Cyprus", "Czech Republic",

@@ -1,0 +1,22 @@
+# A tibble: 486 x 4
+# Rowwise: 
+   NUMBER m      r.squared standard_error
+    <int> <list>     <dbl>          <dbl>
+ 1      1 <lm>      0.195            36.6
+ 2      2 <lm>      0.122           151. 
+ 3      3 <lm>      0.566            25.7
+ 4      4 <lm>      0.0995           34.1
+ 5      5 <lm>      0.183            31.8
+ 6      6 <lm>      0.291            40.8
+ 7      7 <lm>      0.442            31.6
+ 8      8 <lm>      0.563            24.8
+ 9     10 <lm>      0.339            36.9
+10     11 <lm>      0.290            32.9
+# … with 476 more rows
+   r.squared       standard_error   
+ Min.   :0.01803   Min.   :  5.139  
+ 1st Qu.:0.34311   1st Qu.: 14.199  
+ Median :0.56138   Median : 21.052  
+ Mean   :0.54828   Mean   : 27.352  
+ 3rd Qu.:0.76198   3rd Qu.: 32.858  
+ Max.   :0.99288   Max.   :200.528  

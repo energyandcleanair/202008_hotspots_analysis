@@ -1,0 +1,27 @@
+
+Call:
+lm(formula = formula, data = dw)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-578.35  -19.13    2.05   20.86  679.61 
+
+Coefficients:
+                         Estimate Std. Error t value Pr(>|t|)    
+(Intercept)            -1.348e+01  8.157e-01 -16.526  < 2e-16 ***
+value_original_mean     6.708e-01  7.539e-03  88.971  < 2e-16 ***
+r50:SOURCETYCoal        5.551e+02  1.389e+01  39.975  < 2e-16 ***
+r50:SOURCETYOil & Gas   7.419e+02  2.314e+01  32.058  < 2e-16 ***
+r50:SOURCETYSmelter     6.362e+02  2.473e+01  25.722  < 2e-16 ***
+r50:ELEVATION          -1.252e-01  1.236e-02 -10.124  < 2e-16 ***
+r200:SOURCETYCoal      -3.227e+02  1.785e+01 -18.083  < 2e-16 ***
+r200:SOURCETYOil & Gas -5.872e+02  3.255e+01 -18.039  < 2e-16 ***
+r200:SOURCETYSmelter   -1.708e+02  3.787e+01  -4.509  6.6e-06 ***
+r200:ELEVATION          7.647e-02  2.099e-02   3.643 0.000272 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 52.87 on 7280 degrees of freedom
+Multiple R-squared:  0.8621,	Adjusted R-squared:  0.862 
+F-statistic:  5059 on 9 and 7280 DF,  p-value: < 2.2e-16
+

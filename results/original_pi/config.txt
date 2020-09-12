@@ -1,0 +1,4 @@
+value_original ~ value_original_mean + (r50 + r200):(SOURCETY + 
+    ELEVATION)
+[1] "Interval: prediction"
+[1] "Cutoff date: 0000-09-01"

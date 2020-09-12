@@ -15,21 +15,22 @@ source('./extract.R')
 file_values <- file.path("results", "values.RDS")
 file_values_202008 <- file.path("results", "values_202008.RDS")
 
-# dir.create(file.path("results","plots"), recursive=T, showWarnings=F)
-# dir.create(file.path("results","data"), recursive=T, showWarnings=F)
 
 run_all <- function(formula, interval, experiment_name, cutoff_date, lm_per_source, fn_aggregate_omi=mean){
 
   # formula: the formula to be used in lm
   # interval: the type of CI used in predict: either 'confidence' or 'prediction'
-  # experiment_name: used for folder classification
+  # experiment_name: used for resut subfolder
+  # cutoff_date: when are we cutting years e.g. 0000-09-01 for Sep -> Aug predictions
+  # lm_per_source: whether to apply one model per emissino source (lm_per_source=T)
+  #               or one model for all sources together
+  # fn_aggregate_omi: how do we aggregate OMI emission data for each source per year (e.g. mean or sum)
 
 
   # Save config in folder
   dir_results <- file.path("results", experiment_name)
-  dir.create(dir_results, showWarnings = FALSE)
+  dir.create(dir_results, recursive=T, showWarnings = F)
   utils.save_config(dir_results, formula, interval, cutoff_date)
-
 
   # Explanation -------------------------------------------------------------
   # 'measures' refers to NASA emission data
@@ -45,6 +46,8 @@ run_all <- function(formula, interval, experiment_name, cutoff_date, lm_per_sour
   d.measures.wide <- utils.read_points()
 
   if(!file.exists(file_values)){
+    # Extract OMI values from NC files. Results were pre-computed
+    # and stored in "results" folder
     extract_omi_data()
   }
 
@@ -80,7 +83,7 @@ run_all <- function(formula, interval, experiment_name, cutoff_date, lm_per_sour
         tidyr::pivot_longer(-c(NUMBER,SOURCETY,COUNTRY,ELEVATION),
                             names_to="year",
                             names_prefix = "s",
-                            values_to="sigma_original") %>%
+                            values_to="sigma_nasa") %>%
         mutate(year=as.numeric(year))
     )
 
@@ -146,31 +149,5 @@ run_all <- function(formula, interval, experiment_name, cutoff_date, lm_per_sour
   t.yoy.sector <- utils.table_yoy(d.omi.pred, group_by_cols = c("COUNTRY","SOURCETY"))
   write.csv(t.yoy.sector, file.path(dir_results, "yoy.sector.csv"), row.names=F)
 
-  # Jan July: only considering first N months of a year
-  # Not robust given that the correlation was built on whole years
-  # e.g. risk of missing seasonal patterns
-  # # Jan - July ------------------------------------------------------------
-  # date_to_year_july <- function(date){
-  #   ifelse(lubridate::yday(date)<lubridate::yday("0000-08-01"),
-  #          lubridate::year(date),
-  #          NA)
-  # }
-  # d.omi.pred.july <- utils.prediction_ytd(d.all.year, d.omi, date_to_year=date_to_year_july)
-  #
-  # (p1 <- plot_total_emissions(d.omi.pred.july, period_name="January-July"))
-  # ggsave(file.path("results","plots","total_emissions_2020_july.png"), plot=p1, width=12, height=6)
-  #
-  # (p2 <- plot_yoy_variations(d.omi.pred.july, period_name="January-July"))
-  # ggsave(file.path("results","plots","yoy_variations_2020_july.png"), plot=p2, width=12, height=6)
-  #
-  # utils.table_yoy(d.omi.pred.july)
-  #
-  # t.yoy.july <- utils.country_table_yoy(d.omi.pred.july)
-  # write.csv(t.yoy.july, file.path("results","data","yoy.janjuly.csv"), row.names=F)
-  #
-  # t.yoy.july.sector <- utils.country_table_yoy(d.omi.pred.july, group_by_cols = c("COUNTRY","SOURCETY"))
-  # write.csv(t.yoy.july.sector, file.path("results","data","yoy.janjuly.sector.csv"), row.names=F)
-  #
-  #
 }
 

@@ -1,0 +1,3 @@
+value_original ~ value_original_mean + r10 + r50 + r100 + r200
+[1] "Interval: confidence"
+[1] "Cutoff date: 0000-09-01"
