@@ -38,6 +38,17 @@ run_concentrations <- function(date_from, date_to, experiment_name, radius_km=50
     mutate(value=utils.mad_filter(value, n_mad=n_mad, saturate=T))
 
   countries <- c("India", "Russia", "China", "Mexico", "South Africa", "Saudi Arabia", "Europe", "Australia")
+#
+#   t.yoy.country <- utils.table_yoy_concentrations(d.omi.filtered, group_by_cols = c("COUNTRY"))
+#   write.csv(t.yoy.country, file.path(dir_results, "t.yoy.country.csv"), row.names=F)
+#
+#   t.yoy.country.sector <- utils.table_yoy_concentrations(d.omi.filtered, group_by_cols = c("COUNTRY", "SOURCETY"))
+#   write.csv(t.yoy.country.sector, file.path(dir_results, "t.yoy.country.sector.csv"), row.names=F)
+#
+#   t.yoy.sector <- utils.table_yoy_concentrations(d.omi.filtered, group_by_cols = c("SOURCETY"))
+#   write.csv(t.yoy.sector, file.path(dir_results, "t.yoy.sector.csv"), row.names=F)
+
+
 
   (p <- plot.running2020_vs_2019(d.omi.filtered, d.measures.wide, countries=countries, radius_km=radius_km))
   ggsave(filename=file.path(dir_results, "running2020_vs_2019.png"), plot=p, width=12, height=10)
