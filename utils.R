@@ -327,6 +327,7 @@ utils.top_n_countries <- function(d.measures.wide, top_n){
 utils.table_yoy_concentrations <- function(d, group_by_cols=c("COUNTRY")){
 
 d <- d %>%
+  mutate(year=lubridate::year(date)) %>%
   group_by_at(c(group_by_cols, "year", "radius_km")) %>%
   dplyr::summarise(value=mean(value, na.rm=T))
 
@@ -340,7 +341,7 @@ d %>%
   rowwise() %>%
   mutate(diff_yoy=(value - value.lag)/value.lag,
          diff_yoy_absolute=(value - value.lag)) %>%
-  arrange(diff_yoy)
+  arrange_at(group_by_cols)
 }
 
 utils.merge_europe <- function(d){
