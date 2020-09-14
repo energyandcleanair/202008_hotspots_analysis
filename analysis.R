@@ -1,5 +1,6 @@
+require(plyr)
 require(dplyr)
-require(tidyr)
+require(tidyr); require(magrittr); require(readxl)
 require(sf)
 require(stringr)
 require(pbapply)
@@ -8,15 +9,52 @@ require(ggplot2)
 require(magrittr)
 require(rcrea)
 require(Hmisc)
+require(zoo)
 
 source('./utils.R')
 source('./plots.R')
 source('./extract.R')
 file_values <- file.path("results", "values.RDS")
 file_values_202008 <- file.path("results", "values_202008.RDS")
+sel <- dplyr::select
+
+run_concentrations <- function(date_from, date_to, experiment_name, radius_km=50, n_mad=5){
+
+  dir_results <- file.path("results", experiment_name)
+  dir.create(dir_results, recursive=T, showWarnings = F)
+
+  d.measures.wide <- tibble(utils.read_points())
+
+  d.omi <- readRDS(file_values) %>%
+    filter(date < "2020-08-01",
+           radius_km==!!radius_km) %>%
+    rbind(readRDS(file_values_202008)) %>%
+    left_join(d.measures.wide %>% sel(NUMBER, SOURCETY, COUNTRY, contains("ITUD"))) %>%
+    utils.merge_europe() %>%
+    filter(SOURCETY!="Volcano")
+
+  d.omi.filtered <- d.omi %>%
+    group_by(NUMBER, SOURCETY, COUNTRY, radius_km) %>%
+    mutate(value=utils.mad_filter(value, n_mad=n_mad, saturate=T))
+
+  countries <- c("India", "Russia", "China", "Mexico", "South Africa", "Saudi Arabia", "Europe", "Australia")
+
+  (p <- plot.running2020_vs_2019(d.omi.filtered, d.measures.wide, countries=countries, radius_km=radius_km))
+  ggsave(filename=file.path(dir_results, "running2020_vs_2019.png"), plot=p, width=12, height=10)
+
+  (p <- plot_ts_concentrations(d.omi.filtered, countries=countries, radius_km=radius_km, year_min=2010))
+  ggsave(filename=file.path(dir_results, "ts_2010_2020.png"), plot=p, width=12, height=10)
+
+  (p <- plot_yoy_concentrations(d.omi.filtered, date_from, date_to, countries=countries, radius_km=radius_km, year_min=2010))
+  ggsave(filename=file.path(dir_results, "yoy_2010_2020.png"), plot=p, width=12, height=10)
+
+  (p <- plot_yoy_concentrations(d.omi.filtered, date_from, date_to, countries=countries, radius_km=radius_km, year_min=2015))
+    ggsave(filename=file.path(dir_results, "yoy_2015_2020.png"), plot=p, width=12, height=10)
+
+}
 
 
-run_all <- function(formula, interval, experiment_name, cutoff_date, lm_per_source, fn_aggregate_omi=mean){
+run_predictions <- function(formula, interval, experiment_name, cutoff_date, lm_per_source, fn_aggregate_omi=mean){
 
   # formula: the formula to be used in lm
   # interval: the type of CI used in predict: either 'confidence' or 'prediction'

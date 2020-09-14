@@ -48,7 +48,7 @@ utils.values_at_point <- function(file, points){
       col.names = NULL,
       parallel = TRUE,
       n.cores = NULL
-    ) %>% rename(value=r_layer)
+    ) %>% dplyr::rename(value=r_layer)
     points$date <- utils.date_from_filename(file)
     points_lite <- tibble(points) %>% dplyr::select(-c(geometry))
     return(points_lite)
@@ -311,4 +311,62 @@ utils.table_yoy_w_europe <- function(d.omi.pred, group_by_cols=c("COUNTRY")){
   d <- d %>% filter(COUNTRY %in% selected)
 
   return(utils.table_yoy(d, group_by_cols))
+}
+
+utils.top_n_countries <- function(d.measures.wide, top_n){
+  data.frame(d.measures.wide) %>%
+    dplyr::select(-c(geometry)) %>%
+    group_by(COUNTRY) %>%
+    summarise(value=sum(y2019)) %>%
+    arrange(desc(value)) %>%
+    top_n(top_n, value) %>%
+    mutate(rank=row_number()) %>%
+    dplyr::select(COUNTRY, rank)
+}
+
+utils.table_yoy_concentrations <- function(d, group_by_cols=c("COUNTRY")){
+
+d <- d %>%
+  group_by_at(c(group_by_cols, "year", "radius_km")) %>%
+  dplyr::summarise(value=mean(value, na.rm=T))
+
+d %>%
+  # filter(value>0) %>%
+  dplyr::group_by_at(group_by_cols) %>%
+  dplyr::arrange(year) %>%
+  dplyr::mutate(year.lag = lag(year,1),
+         value.lag = lag(value,1)
+         ) %>%
+  rowwise() %>%
+  mutate(diff_yoy=(value - value.lag)/value.lag,
+         diff_yoy_absolute=(value - value.lag)) %>%
+  arrange(diff_yoy)
+}
+
+utils.merge_europe <- function(d){
+
+  europe <- c("Austria", "Belgium", "Bulgaria", "Croatia", "Republic of Cyprus", "Czech Republic",
+              "Denmark", "Estonia", "Finland", "France", "Germany", "Greece", "Hungary", "Ireland",
+              "Italy", "Latvia", "Lithuania", "Luxembourg", "Malta", "Netherlands", "Poland",
+              "Portugal", "Romania", "Slovakia", "Slovenia", "Spain", "Sweden",
+              # Below are "European countries" not in the EU
+              "Ukraine", "UK", "Serbia", "Albania")
+
+  d$COUNTRY[d$COUNTRY %in% europe] <- "Europe"
+
+  d
+}
+
+utils.mad_filter <- function(x, n_mad=3, saturate=F){
+ # if saturate==T, outliers are replaced with max and min values within filter.
+ # If not, they're replaced with NAs
+ xmad <- mad(x, constant=1, na.rm = T)
+ xmed <- median(x, na.rm=T)
+ xmax <- xmed + n_mad * xmad
+ xmin <- xmed - n_mad * xmad
+ xmax_replace <- ifelse(saturate, xmax, NA)
+ xmin_replace <- ifelse(saturate, xmin, NA)
+ x[x >= xmax] <- xmax_replace
+ x[x <= xmin] <- xmin_replace
+ x
 }

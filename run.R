@@ -6,6 +6,34 @@ source('./analysis.R')
 # _ci: 'confidence' interval is used for model uncertainty
 # _pi: 'prediction' interval is used for model uncertainty
 
+# OMI-only (latest) approach
+date_from <- "0000-04-01"
+date_to <- "0000-08-31"
+radius_km <- 50
+experiment_name <- "omi_april_august_50km_mad2"
+n_mad <- 2
+run_concentrations(date_from, date_to, experiment_name, n_mad=n_mad, radius_km=radius_km)
+
+experiment_name <- "omi_april_august_50km_mad3"
+n_mad <- 3
+run_concentrations(date_from, date_to, experiment_name, n_mad=n_mad, radius_km=radius_km)
+
+experiment_name <- "omi_april_august_50km_mad5"
+n_mad <- 5
+run_concentrations(date_from, date_to, experiment_name, n_mad=n_mad, radius_km=radius_km)
+
+experiment_name <- "omi_april_august_50km_mad10"
+n_mad <- 10
+run_concentrations(date_from, date_to, experiment_name, n_mad=n_mad, radius_km=radius_km)
+
+
+experiment_name <- "omi_april_august_50km_mad3"
+date_from <- "0000-04-01"
+date_to <- "0000-08-31"
+n_mad=3
+run_concentrations(date_from, date_to, experiment_name, n_mad=n_mad, radius_km=radius_km)
+
+
 # Original
 fn_aggregate_omi = mean
 formula = value_original ~ value_original_mean + (r50 + r200):(SOURCETY + ELEVATION)
