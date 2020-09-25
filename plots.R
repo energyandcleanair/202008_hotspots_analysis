@@ -64,41 +64,103 @@ plot_all_correlations <- function(dw_plot){
    facet_wrap(~NUMBER, scales="free")
 }
 
-plot_ts_concentrations <- function(d.omi, countries, radius_km=50, year_min=NULL){
+plot_yoy_ts_concentrations <- function(d.omi, countries, radius_km=50, year_min=NULL){
+
+  year_min <- ifelse(is.null(year_min), min(lubridate::year(d.omi$date)), year_min)
+
   d <- d.omi %>%
     filter(radius_km==!!radius_km,
            SOURCETY != "Volcano") %>%
     mutate(COUNTRY = ifelse(COUNTRY %in% countries, COUNTRY, 'Others')) %>%
-    # First group by hotstpot
-    group_by(NUMBER, SOURCETY, COUNTRY, radius_km, date, year=lubridate::year(date)) %>%
+    filter(COUNTRY %in% countries) %>% # Remove Others if not in list
+    group_by(COUNTRY, date, year=lubridate::year(date), radius_km) %>%
     dplyr::summarise(value=mean(value, na.rm=T)) %>%
-    # Then by country
-    group_by(COUNTRY, date, year, radius_km) %>%
-    dplyr::summarise(value=mean(value, na.rm=T)) %>%
+    filter(year>=year_min) %>%
+    ungroup() %>%
+    rcrea::utils.rolling_average("day",30,"value", min_values = 15) %>%
     mutate(date = `year<-`(date, 0))
 
-  ggplot(d %>% filter(year>=2015) %>% rcrea::utils.rolling_average("day",30,"value") ) +
+  # Adding yoy ratio
+  d.yoy <- d %>% group_by(COUNTRY, date) %>%
+    arrange(year) %>%
+    mutate(value=ifelse(lag(year)==year-1,
+                      (value -lag(value))/lag(value) ,
+                      NA
+                      )) %>%
+    rcrea::utils.rolling_average("day",30,"value", min_values = 15)
+
+
+  ggplot(d.yoy) +
+    geom_line(aes(date, value, col=factor(year, ordered=T))) +
+    facet_wrap (~COUNTRY, scales="free_y") +
+    scale_color_brewer(palette="Paired", name="Year") +
+    labs(title="SO2 column density around emission hotspots - 2020 vs 2019",
+         subtitle="30-day running average",
+         x=NULL,
+         y=NULL) +
+    scale_y_continuous(labels=scales::percent)+
+    theme_light()
+}
+
+plot_ts_concentrations <- function(d.omi, countries, radius_km=50, year_min=NULL){
+
+  year_min <- ifelse(is.null(year_min), min(lubridate::year(d.omi$date)), year_min)
+
+  d <- d.omi %>%
+    filter(radius_km==!!radius_km,
+           SOURCETY != "Volcano") %>%
+    mutate(COUNTRY = ifelse(COUNTRY %in% countries, COUNTRY, 'Others')) %>%
+    filter(COUNTRY %in% countries) %>% # Remove Others if not in list
+    group_by(COUNTRY, date, year=lubridate::year(date), radius_km) %>%
+    dplyr::summarise(value=mean(value, na.rm=T)) %>%
+    filter(year>=year_min) %>%
+    ungroup() %>%
+    rcrea::utils.rolling_average("day",30,"value") %>%
+    mutate(date = `year<-`(date, 0))
+
+  ggplot(d) +
     geom_line(aes(date, value, col=factor(year, ordered=T))) +
     facet_wrap (~COUNTRY, scales="free_y") +
     scale_color_brewer(palette="Paired", name="Year") +
     labs(title="SO2 column density around emission hotspots",
+         subtitle="30-day running average",
          x=NULL,
          y="SO2 conentration [Dobson Unit]") +
     theme_light()
 }
 
-plot_yoy_concentrations <- function(d.omi, date_from, date_to, countries, radius_km=50, year_min=NULL){
+plot_yoy_concentrations <- function(d.omi, date_from=NULL, date_to=NULL, countries=NULL, radius_km=50, year_min=NULL, cutoff_date=NULL){
 
-  d.omi.country <- d.omi %>%
-    filter(lubridate::yday(date) >= lubridate::yday(date_from),
-           lubridate::yday(date) <= lubridate::yday(date_to),
+
+  # Two versions: whole year, offsetted by cutoff_date
+  if(!is.null(cutoff_date)){
+    date_to_year<- function(date){
+      lubridate::year(date - lubridate::days(lubridate::yday(cutoff_date)) + lubridate::years(1))
+    }
+    period_name <- paste0(format(lubridate::date(cutoff_date)+lubridate::days(1), "%B"),
+                          "-",
+                          format(lubridate::date(cutoff_date), "%B"))
+  }else{
+    # Or between date_from and date_to
+    date_to_year <- lubridate::year
+    d.omi <- d.omi %>% filter(lubridate::yday(date) >= lubridate::yday(date_from),
+                          lubridate::yday(date) <= lubridate::yday(date_to))
+    period_name <- paste0(format(lubridate::date(date_from), "%B"),
+                          "-",
+                          format(lubridate::date(date_to), "%B"))
+  }
+
+
+
+  d.omi.country <- d.omi %>% filter(
            radius_km==!!radius_km,
            SOURCETY != "Volcano") %>%
     mutate(COUNTRY = ifelse(COUNTRY %in% countries, COUNTRY, 'Others')) %>%
+    filter(COUNTRY %in% countries) %>% # Remove Others if not in list
     # # First group by hotstpot
     # group_by(NUMBER, SOURCETY, COUNTRY, radius_km, year=lubridate::year(date)) %>%
     # # First group by date (to mimic running365 plot)
-    group_by(date, COUNTRY, radius_km, year=lubridate::year(date)) %>%
+    group_by(date, COUNTRY, radius_km, year=date_to_year(date)) %>%
     dplyr::summarise(value=mean(value, na.rm=T)) %>%
     # Then by country
     group_by(COUNTRY, year, radius_km) %>%
@@ -107,9 +169,7 @@ plot_yoy_concentrations <- function(d.omi, date_from, date_to, countries, radius
   t.yoy.country <- utils.table_yoy_concentrations(d.omi.country,
                                                   group_by_cols=c("COUNTRY"))
 
-  period_name <- paste0(format(lubridate::date(date_from), "%B"),
-                        "-",
-                        format(lubridate::date(date_to), "%B"))
+
 
   year_min <- ifelse(is.null(year_min), min(t.yoy.country$year), year_min)
 
@@ -121,21 +181,72 @@ plot_yoy_concentrations <- function(d.omi, date_from, date_to, countries, radius
     geom_hline(yintercept=0) +
     theme_light() +
     # rcrea::theme_crea() +
+    scale_x_continuous(breaks=scales::pretty_breaks()) +
     scale_y_continuous(labels=scales::percent) +
     labs(title=paste0("Year-on-year variation of SO2 concentration for ", period_name, " period"),
-         caption="Source: CREA based on OMI",
+         caption="Source: OMI SO2 column amount at a 50km radius around anthropogenic emission hotspots.",
          y="Year-on-year difference [Dobson Unit]",
          x=NULL)
 }
 
 
-plot.running2020_vs_2019 <- function(d.omi, d.measures.wide, radius_km, countries=NULL){
+plot_yoy_concentrations_sectors <- function(d.omi, date_from=NULL, date_to=NULL, countries=NULL, radius_km=50, year_min=NULL, cutoff_date=NULL){
 
-  # require(tidyverse); require(magrittr); require(readxl)
-  # require(lubridate)
-  # require(zoo)
+  # Two versions: whole year, offsetted by cutoff_date
+  if(!is.null(cutoff_date)){
+    date_to_year<- function(date){
+      lubridate::year(date - lubridate::days(lubridate::yday(cutoff_date)) + lubridate::years(1))
+    }
+    period_name <- paste0(format(lubridate::date(cutoff_date)+lubridate::days(1), "%B"),
+                          "-",
+                          format(lubridate::date(cutoff_date), "%B"))
+  }else{
+    # Or between date_from and date_to
+    date_to_year <- lubridate::year
+    d.omi <- d.omi %>% filter(lubridate::yday(date) >= lubridate::yday(date_from),
+                              lubridate::yday(date) <= lubridate::yday(date_to))
+    period_name <- paste0(format(lubridate::date(date_from), "%B"),
+                          "-",
+                          format(lubridate::date(date_to), "%B"))
+  }
 
-  sel = dplyr::select
+
+  d.omi.country <- d.omi %>%
+    filter(radius_km==!!radius_km,
+           SOURCETY != "Volcano") %>%
+    # # First group by hotstpot
+    # group_by(NUMBER, SOURCETY, COUNTRY, radius_km, year=lubridate::year(date)) %>%
+    # # First group by date (to mimic running365 plot)
+    group_by(date, SOURCETY, radius_km, year=date_to_year(date)) %>%
+    dplyr::summarise(value=mean(value, na.rm=T)) %>%
+    # Then by country
+    group_by(SOURCETY, year, radius_km) %>%
+    dplyr::summarise(value=mean(value, na.rm=T))
+
+  t.yoy.sector <- utils.table_yoy_concentrations(d.omi.country,
+                                                  group_by_cols=c("SOURCETY"))
+
+  year_min <- ifelse(is.null(year_min), min(t.yoy.sector$year), year_min)
+
+  ggplot(t.yoy.sector %>% filter(year>=year_min)) +
+    geom_bar(aes(y=diff_yoy,x=year),
+             stat="identity",
+             fill="darkred") +
+    facet_wrap(~SOURCETY, scales = "free_y") +
+    geom_hline(yintercept=0) +
+    theme_light() +
+    # rcrea::theme_crea() +
+    scale_x_continuous(breaks=scales::pretty_breaks()) +
+    scale_y_continuous(labels=scales::percent) +
+    labs(title=paste0("Year-on-year variation of SO2 concentration for ", period_name, " period"),
+         caption="Source: OMI SO2 column amount at a 50km radius around anthropogenic emission hotspots.",
+         y="Year-on-year difference [Dobson Unit]",
+         x=NULL)
+}
+
+
+plot.running2020_vs_2019 <- function(d.omi, d.measures.wide, radius_km, countries=NULL, percent=F, group_by_cols=c("COUNTRY")){
+
   # Renaming to Lauri's convention
   omi <- d.omi
   meas <- d.measures.wide
@@ -150,8 +261,8 @@ plot.running2020_vs_2019 <- function(d.omi, d.measures.wide, radius_km, countrie
   }
 
 
-  omi$value %>% (function(x) x %>% pmin(3) %>% pmax(0)) -> omi$value_filter
-  omi %<>% dplyr::rename(nofilter=value, filter=value_filter) %>% gather(filter, value, filter, nofilter)
+  # omi$value %>% (function(x) x %>% pmin(3) %>% pmax(0)) -> omi$value_filter
+  # omi %<>% dplyr::rename(nofilter=value, filter=value_filter) %>% gather(filter, value, filter, nofilter)
 
   # omi %>% filter(month(date) %in% 3:8, radius_km == 50) %>% group_by(SOURCETY, year=year(date), filter) %>%
   #   summarise_at('value', mean, na.rm=T) -> omi_yearly
@@ -169,28 +280,80 @@ plot.running2020_vs_2019 <- function(d.omi, d.measures.wide, radius_km, countrie
   #   ggplot(aes(date, rmean)) + geom_line() + facet_wrap(~SOURCETY)
 
   roll_fn <- function(df){
-    df$rmean = rollapplyr(df$value, 365, mean, na.rm=T, fill=NA) -
-      mean(df$value[year(df$date)==2019], na.rm=T)
+    m <- mean(df$value[year(df$date)==2019], na.rm=T)
+    if(percent){
+      df$rmean = (rollapplyr(df$value, 365, mean, na.rm=T, fill=NA) - m)/m
+    }else{
+      df$rmean = (rollapplyr(df$value, 365, mean, na.rm=T, fill=NA) - m)
+    }
     df
   }
+
   omi %>% filter(radius_km == !!radius_km, SOURCETY != 'Volcano') %>%
     mutate(COUNTRY = ifelse(COUNTRY %in% countries, COUNTRY, 'Others')) %>%
-    group_by(COUNTRY, date, filter) %>%
+    filter(COUNTRY %in% countries) %>% # Remove Others if not in list
+    group_by_at(c(group_by_cols, "date")) %>%
     summarise_at('value', mean, na.rm=T) %>%
-    ddply(.(COUNTRY, filter), roll_fn) ->
-    country_rmean
+    ddply(group_by_cols, roll_fn) ->
+    rmean
 
+  d <- rmean %>% filter(date>='2020-01-01')
   chg_colors <- c("#35416C", "#8CC9D0", "darkgray", "#CC0000", "#990000")
-  country_rmean %>% filter(date>='2020-01-01', filter=='nofilter') %>%
-    ggplot(aes(date, rmean, col=rmean)) + geom_line(size=1) + facet_wrap(~COUNTRY) +
-    scale_color_gradientn(colors = chg_colors, limits=c(-0.035,0.035)) +
+  ymax <- max(abs(d$rmean))
+  p <- ggplot(d, aes(date, rmean, col=rmean)) +
+    geom_line(size=1, show.legend = F) +
+    facet_wrap(as.formula(paste("~", paste(group_by_cols, collapse = "+")))) +
+    scale_color_gradientn(colors = chg_colors, limits=c(-ymax,ymax)) +
     # scale_color_distiller(palette="RdBu", limits=c(-0.035,0.035)) +
     # rcrea::CREAtheme.scale_color_crea_c('change', bias=.4) +
     theme_light() +
-    labs(title="SO2 column density around anthropogenic sources - 2020 vs 2019",
-         subtitle="365-day running mean in 2020 minus 2019 average",
-         caption="Source: OMI SO2 tropospheric column density at a 50km radius around anthropogenic emission hotspots.",
-         y= "∆ column density [Dobson Unit]",
+    labs(title="SO2 column amount around anthropogenic sources - 2020 vs 2019",
+         caption="Source: OMI SO2 column amount at a 50km radius around anthropogenic emission hotspots.",
          x=NULL)
+
+  if(percent){
+    p <- p + scale_y_continuous(labels=scales::percent) +
+      labs(subtitle="365-day running mean in 2020 vs 2019 average",y=NULL)
+  }else{
+    p <- p + labs(subtitle="365-day running mean in 2020 minus 2019 average",y="∆ column amount [Dobson Unit]")
+  }
+  return(p)
 }
+
+
+
+
+plot_ts <- function(d.omi, radius_km, group_by_cols, countries, year_min=NULL, running_days=365){
+
+  year_min <- ifelse(is.null(year_min), min(lubridate::year(d.omi$date), na.rm=T), year_min)
+
+  if(!"year" %in% names(d.omi)){
+    d.omi <- d.omi %>%
+      mutate(year=lubridate::year(date))
+  }
+
+  omi_rmean <- d.omi %>%
+    filter(radius_km == !!radius_km,
+           year >= year_min-1) %>%
+    mutate(COUNTRY = ifelse(COUNTRY %in% countries, COUNTRY, 'Others')) %>%
+    filter(COUNTRY %in% countries) %>% # Remove Others if not in list
+    group_by_at(c(group_by_cols, "date")) %>%
+    summarise_at('value', mean, na.rm=T) %>%
+    rcrea::utils.rolling_average("day", running_days, "value")
+
+  ggplot(omi_rmean) +
+    geom_line(aes(date, value)) +
+    facet_wrap(as.formula(paste("~", paste(group_by_cols, collapse = "+"))), scales="free_y") +
+    theme_light() +
+    ylim(0, NA) +
+    xlim(year_min, 2021) +
+    expand_limits(x = 0) +
+    labs(title="SO2 column amount around anthropogenic sources",
+         subtitle=paste0(running_days,"-day running average"),
+         caption="Source: OMI SO2 column amount at a 50km radius around anthropogenic emission hotspots.",
+         y= "Column amount [Dobson Unit]",
+         x=NULL)
+
+}
+
 

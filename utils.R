@@ -36,9 +36,19 @@ utils.date_from_filename <- function(filename){
 }
 
 
-utils.values_at_point <- function(file, points){
+utils.values_at_point <- function(file, points, include_meta=T){
   tryCatch({
-    r <- raster::brick(file, varname="ColumnAmountSO2_PBL")
+
+    if(!include_meta){
+      r <- raster::stack(file, varname="ColumnAmountSO2_PBL")
+    }else{
+      r <- raster::stack(
+        raster::stack(file, varname="ColumnAmountSO2_PBL"),
+        raster::stack(file, varname="RadiativeCloudFraction"),
+        raster::stack(file, varname="SolarZenithAngle")
+      )
+    }
+
     # values <- raster::extract(r, points)[,1]
     points <- rgis::fast_extract(
       sf = points,
@@ -48,7 +58,14 @@ utils.values_at_point <- function(file, points){
       col.names = NULL,
       parallel = TRUE,
       n.cores = NULL
-    ) %>% dplyr::rename(value=r_layer)
+    ) %>% dplyr::rename(value=r_ColumnAmountSO2_PBL)
+
+    if(include_meta){
+      points <- points %>% rename(cloud_fraction=r_RadiativeCloudFraction,
+                                  solar_angle=r_SolarZenithAngle)
+    }
+
+
     points$date <- utils.date_from_filename(file)
     points_lite <- tibble(points) %>% dplyr::select(-c(geometry))
     return(points_lite)
@@ -58,6 +75,7 @@ utils.values_at_point <- function(file, points){
     return(NA)
   })
 }
+
 
 
 utils.add_predicted_and_ci <- function(d.omi.pred, m, interval, lm_per_source){
@@ -326,22 +344,27 @@ utils.top_n_countries <- function(d.measures.wide, top_n){
 
 utils.table_yoy_concentrations <- function(d, group_by_cols=c("COUNTRY")){
 
-d <- d %>%
-  mutate(year=lubridate::year(date)) %>%
-  group_by_at(c(group_by_cols, "year", "radius_km")) %>%
-  dplyr::summarise(value=mean(value, na.rm=T))
+  if(!"year" %in% names(d)){
+    d <- d %>%
+      mutate(year=lubridate::year(date))
+  }
 
-d %>%
-  # filter(value>0) %>%
-  dplyr::group_by_at(group_by_cols) %>%
-  dplyr::arrange(year) %>%
-  dplyr::mutate(year.lag = lag(year,1),
-         value.lag = lag(value,1)
-         ) %>%
-  rowwise() %>%
-  mutate(diff_yoy=(value - value.lag)/value.lag,
-         diff_yoy_absolute=(value - value.lag)) %>%
-  arrange_at(group_by_cols)
+  d <- d %>%
+    group_by_at(c(group_by_cols, "year", "radius_km")) %>%
+    dplyr::summarise(value=mean(value, na.rm=T))
+
+  d %>%
+    # filter(value>0) %>%
+    dplyr::group_by_at(group_by_cols) %>%
+    dplyr::arrange(year) %>%
+    dplyr::mutate(year.lag = lag(year,1),
+           value.lag = lag(value,1)
+           ) %>%
+    rowwise() %>%
+    mutate(diff_yoy=(value - value.lag)/value.lag,
+           diff_yoy_absolute=(value - value.lag),
+           diff_yoy_str=paste0(round(diff_yoy*100,1), "%")) %>%
+    arrange_at(group_by_cols)
 }
 
 utils.merge_europe <- function(d){
@@ -370,4 +393,86 @@ utils.mad_filter <- function(x, n_mad=3, saturate=F){
  x[x >= xmax] <- xmax_replace
  x[x <= xmin] <- xmin_replace
  x
+}
+
+utils.filter.omi <- function(d.omi, d.measures.year, filter_nasa, shave_tails, nasa_first=T){
+
+  d <- d.omi %>% filter(!is.na(value))
+
+  # Filter as set by NASA
+  # Fioletov, V. E., McLinden, C. A., Krotkov, N., Li, C., Joiner, J., Theys, N., … Moran, M. D. (2016).
+  # A global catalogue of large SO2 sources and emissions derived from the Ozone Monitoring Instrument
+  # Atmospheric Chemistry and Physics, 16(18), 11497–11519. https://doi.org/10.5194/acp-16-11497-2016
+
+  # "It was set to 5DU for sources that emit less
+  # than 100 kt yr−1, to 10DU for sources that emit between 100
+  # and 1000 kt yr−1, and to 15DU for sources with emissions
+  # above 1000 kt yr−1."
+  do_filter_nasa <- function(d, d.measures.year){
+    d.limits <- d.measures.year %>%
+      group_by(NUMBER) %>%
+      summarise(value_original = max(value_original, na.rm=T)) %>%
+      mutate(upr = as.numeric(as.character(cut(value_original,
+                                               breaks=c(-Inf, 100, 1000, Inf),
+                                               labels=c(5, 10, 15))))) %>%
+      sel(NUMBER, upr)
+
+    d <- d %>%
+      mutate(year=lubridate::year(date)) %>%
+      left_join(d.limits, by=c("NUMBER")) %>%
+      filter(is.na(upr) | value <= upr) %>%
+      sel(-c(upr))
+    d
+  }
+
+ if(filter_nasa & nasa_first){
+   d <- do_filter_nasa(d, d.measures.year)
+ }
+
+
+  # We constrain values to 0
+  # and shave off same percent on the upper end
+  if(shave_tails){
+    upr_limit <- function(value){
+      tryCatch({
+        quantile0 <- ecdf(value)(0)
+        quantileUpr <- 1 - quantile0
+        as.numeric(quantile(value, quantileUpr, na.rm=T))
+      },  error = function(c) NA)
+    }
+
+    d <- d %>%
+      group_by(NUMBER) %>%
+      mutate(upr=upr_limit(value),
+             value=pmin(value, upr, na.rm=T),
+             value=pmax(value, 0, na.rm=T)) %>%
+      ungroup() %>%
+      sel(-c(upr))
+  }
+
+
+  if(filter_nasa & !nasa_first){
+    d <- do_filter_nasa(d, d.measures.year)
+  }
+
+  d
+}
+
+utils.measures.pivot_longer <- function(d.measures.wide){
+ tibble(d.measures.wide) %>%
+    dplyr:: select( grep( "NUMBER|SOURCETY|COUNTRY|ELEVATION|^y" , names(d.measures.wide))) %>%
+    tidyr::pivot_longer(-c(NUMBER,SOURCETY,COUNTRY,ELEVATION),
+                        names_to="year",
+                        names_prefix = "y",
+                        values_to="value_original") %>%
+    mutate(year=as.numeric(year)) %>%
+    left_join(
+      tibble(d.measures.wide) %>%
+        dplyr:: select( grep( "NUMBER|SOURCETY|COUNTRY|ELEVATION|^s" , names(d.measures.wide))) %>%
+        tidyr::pivot_longer(-c(NUMBER,SOURCETY,COUNTRY,ELEVATION),
+                            names_to="year",
+                            names_prefix = "s",
+                            values_to="sigma_nasa") %>%
+        mutate(year=as.numeric(year))
+    )
 }

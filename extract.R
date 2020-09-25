@@ -4,6 +4,7 @@ extract_omi_data <- function(){
   require(rgdal) #install.packages("rgdal")
   require(velox) #remotes::install_github("hunzikp/velox")
   require(rgis) #remotes::install_github("Pakillo/rgis")
+  require(dplyr)
 
   print("Creating OMI value files. Can take a few hours if not days...")
   radii_km <- c(2, 20, 200)

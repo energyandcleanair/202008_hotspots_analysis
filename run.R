@@ -10,21 +10,52 @@ source('./analysis.R')
 date_from <- "0000-04-01"
 date_to <- "0000-08-31"
 radius_km <- 50
-experiment_name <- "omi_april_august_50km_mad2"
-n_mad <- 2
-run_concentrations(date_from, date_to, experiment_name, n_mad=n_mad, radius_km=radius_km)
+countries <- c("India", "Russia", "China", "Mexico", "South Africa", "Saudi Arabia", "Europe", "Australia", "Indonesia", "Turkey", "Others")
 
-experiment_name <- "omi_april_august_50km_mad3"
-n_mad <- 3
-run_concentrations(date_from, date_to, experiment_name, n_mad=n_mad, radius_km=radius_km)
+experiment_name <- "omi_april_august_50km_nasa"
+run_concentrations(date_from, date_to, experiment_name, radius_km=radius_km,
+                   countries=countries,
+                   n_mad=NULL,
+                   filter_nasa=T,
+                   shave_tails=F)
 
-experiment_name <- "omi_april_august_50km_mad5"
-n_mad <- 5
-run_concentrations(date_from, date_to, experiment_name, n_mad=n_mad, radius_km=radius_km)
+experiment_name <- "omi_april_august_50km_nasa_southafrica"
+run_concentrations(date_from, date_to, experiment_name, radius_km=radius_km,
+                   countries="South Africa",
+                   n_mad=NULL,
+                   filter_nasa=T,
+                   shave_tails=F)
 
-experiment_name <- "omi_april_august_50km_mad10"
-n_mad <- 10
-run_concentrations(date_from, date_to, experiment_name, n_mad=n_mad, radius_km=radius_km)
+experiment_name <- "omi_april_august_50km_nasa_tails"
+run_concentrations(date_from, date_to, experiment_name, radius_km=radius_km,
+                   countries=countries,
+                   n_mad=NULL,
+                   filter_nasa=T,
+                   shave_tails=T,
+                   nasa_first=T)
+
+experiment_name <- "omi_april_august_50km_tails"
+run_concentrations(date_from, date_to, experiment_name, radius_km=radius_km,
+                   countries=countries,
+                   n_mad=NULL,
+                   filter_nasa=F,
+                   shave_tails=T)
+
+
+
+experiment_name <- "omi_april_august_50km_tails_nasa"
+run_concentrations(date_from, date_to, experiment_name, radius_km=radius_km,
+                   n_mad=NULL,
+                   filter_nasa=T,
+                   shave_tails=T,
+                   nasa_first=F)
+
+experiment_name <- "omi_april_august_50km_no_filter"
+run_concentrations(date_from, date_to, experiment_name, n_mad=n_mad, radius_km=radius_km,
+                   filter_nasa=F,
+                   shave_tails=F,
+                   nasa_first=F)
+
 
 date_from <- "0000-03-01"
 date_to <- "0000-08-31"
@@ -45,11 +76,8 @@ experiment_name <- "omi_march_august_50km_mad10"
 n_mad <- 10
 run_concentrations(date_from, date_to, experiment_name, n_mad=n_mad, radius_km=radius_km)
 
-
-experiment_name <- "omi_april_august_50km_mad3"
-date_from <- "0000-04-01"
-date_to <- "0000-08-31"
-n_mad=3
+experiment_name <- "omi_march_august_50km_nomad"
+n_mad <- NULL
 run_concentrations(date_from, date_to, experiment_name, n_mad=n_mad, radius_km=radius_km)
 
 
