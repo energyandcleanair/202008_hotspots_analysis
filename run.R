@@ -10,7 +10,7 @@ source('./analysis.R')
 date_from <- "0000-04-01"
 date_to <- "0000-08-31"
 radius_km <- 50
-countries <- c("India", "Russia", "China", "Mexico", "South Africa", "Saudi Arabia", "Europe", "Australia", "Indonesia", "Turkey", "Others")
+countries <- c("India", "Russia", "China", "Mexico", "South Africa", "Saudi Arabia", "Europe", "Australia", "Indonesia", "Singapore", "Turkey", "Others")
 
 experiment_name <- "omi_april_august_50km_nasa"
 run_concentrations(date_from, date_to, experiment_name, radius_km=radius_km,

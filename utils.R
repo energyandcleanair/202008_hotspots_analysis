@@ -41,11 +41,13 @@ utils.values_at_point <- function(file, points, include_meta=T){
 
     if(!include_meta){
       r <- raster::stack(file, varname="ColumnAmountSO2_PBL")
+      cols <- c("NUMBER", "radius_km", "value", "date")
     }else{
       r <- raster::stack(
         raster::stack(file, varname="ColumnAmountSO2_PBL"),
         raster::stack(file, varname="RadiativeCloudFraction"),
         raster::stack(file, varname="SolarZenithAngle")
+        cols <- c("NUMBER", "radius_km", "value", "date", "cloud_fraction", "solar_angle")
       )
     }
 
@@ -67,7 +69,7 @@ utils.values_at_point <- function(file, points, include_meta=T){
 
 
     points$date <- utils.date_from_filename(file)
-    points_lite <- tibble(points) %>% dplyr::select(-c(geometry))
+    points_lite <- tibble(points) %>% dplyr::select_at(cols)
     return(points_lite)
 
   }, error=function(e){

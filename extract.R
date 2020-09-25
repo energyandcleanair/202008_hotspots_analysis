@@ -16,7 +16,5 @@ extract_omi_data <- function(){
   files <- list.files("data",pattern="OMI-Aura_L3-OMSO2e_20.*\\.nc4$", full.names = T)
 
   d <- do.call("rbind", pbapply::pblapply(files, utils.values_at_point, points=pts))
-  d.omi <- d %>% dplyr::select(NUMBER, radius_km, value, date)
-
-  saveRDS(d.omi, "values_50km.RDS")
+  saveRDS(d, "values_50km.RDS")
 }
