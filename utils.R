@@ -47,8 +47,9 @@ utils.values_at_point <- function(file, points, include_meta=T){
         raster::stack(file, varname="ColumnAmountSO2_PBL"),
         raster::stack(file, varname="RadiativeCloudFraction"),
         raster::stack(file, varname="SolarZenithAngle")
-        cols <- c("NUMBER", "radius_km", "value", "date", "cloud_fraction", "solar_angle")
       )
+      cols <- c("NUMBER", "radius_km", "value", "date", "cloud_fraction", "solar_angle")
+
     }
 
     # values <- raster::extract(r, points)[,1]
